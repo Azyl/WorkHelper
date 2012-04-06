@@ -115,10 +115,17 @@ class WorkHelper(JFrame):
         self.RThat = JTextField(maximumSize=Dimension(120,25))
         self.RThat.setToolTipText("Text to be placed or The Finish C_Index")
         
+        
+        bSandReplace = JButton("Replace Text", actionPerformed=self.bSandReplace)
+        bSandReplace.setToolTipText("Replace the text from This with Thext from That in the Text from the Input Area and displays it in the Output Area")
+        
+        bcCat = JButton("CreatCateg", actionPerformed=self.bcCat)
+        bcCat.setToolTipText("Create a categorical form starting C_Index to finish C_Index; Use the above text boxes to define the indexes")
+        
         bM_Categories = JButton("Categories", actionPerformed=self.mCategories)
         bM_Categories.setToolTipText("Make Categories using the lines from the Input Area")
         #bM_Categories = JButton(maximumSize=Dimension(40,25))
-        
+        # de incercat daca merge cu ; sa grupezi in [dsa] elementele
 #############################################################
 
 
@@ -146,6 +153,10 @@ class WorkHelper(JFrame):
             .addGroup(layout.createSequentialGroup()
                 .addComponent(self.RThis)
                 .addComponent(self.RThat))
+            .addGroup(layout.createSequentialGroup()
+                .addComponent(bSandReplace)
+                .addComponent(bcCat))
+                
                 .addComponent(bClear))
             
         )
@@ -170,6 +181,9 @@ class WorkHelper(JFrame):
                     .addGroup(layout.createParallelGroup()
                         .addComponent(self.RThis)
                         .addComponent(self.RThat))
+                    .addGroup(layout.createParallelGroup()   
+                        .addComponent(bSandReplace)
+                        .addComponent(bcCat))
                         )
                     )
                 
@@ -182,7 +196,7 @@ class WorkHelper(JFrame):
         )
         
         #layout.linkSize(SwingConstants.HORIZONTAL, [ok, bCopyToInput, close, bM_Categories])
-        layout.linkSize(SwingConstants.HORIZONTAL, [self.RThis,self.RThat,bRemoveNBSP_L,bRemoveNBSP_R,bCopyToInput,bM_Categories])
+        layout.linkSize(SwingConstants.HORIZONTAL, [self.RThis,self.RThat,bRemoveNBSP_L,bRemoveNBSP_R,bCopyToInput,bM_Categories,bSandReplace,bcCat])
         
         #layout.linkSize(SwingConstants.HORIZONTAL, [self.cCurly,bM_Categories])
 #############################################################
@@ -251,10 +265,14 @@ categories format.
                 textO = "{\n"+ textO + "\n}"
                 if self.cSemiC.isSelected():
                     textO = textO + ";"
-            if self.cCtClipB.isSelected():
-                stringSelection = StringSelection(textO)
-                self.clipboard.setContents(stringSelection, None)
+            self.copyToClipboard(textO)    
             self.area2.setText(textO)
+    
+    def copyToClipboard(self, text):
+            if self.cCtClipB.isSelected():
+                stringSelection = StringSelection(text)
+                self.clipboard.setContents(stringSelection, None)
+            
         
         
     def bCopyToInput(self, e):
@@ -318,9 +336,11 @@ categories format.
             
         if StartIndex<FinishIndex:
             cCats="{"+cCats+"}"
+            self.copyToClipboard(cCats)
             self.area2.setText(cCats)
         
-                
+    def bSandReplace(self, e):
+        self.area2.setText(self.area1.getText().replace(self.RThis.getText(),self.RThat.getText()))
 #############################################################
 
 if __name__ == '__main__':
