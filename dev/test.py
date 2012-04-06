@@ -46,7 +46,7 @@ class WorkHelper(JFrame):
         #self.getContentPane().add(panel)
         
 #############################################################
-#       Layout
+# Layout
         layout = GroupLayout(self.getContentPane())
         self.getContentPane().setLayout(layout)
         layout.setAutoCreateGaps(True)
@@ -54,7 +54,7 @@ class WorkHelper(JFrame):
 #############################################################
 
 #############################################################
-#       Scroll Area Input + Output
+# Scroll Area Input + Output
         Larea1 = JLabel("InputArea:")
         Larea2 = JLabel("OutputArea:")
         
@@ -79,7 +79,7 @@ class WorkHelper(JFrame):
 #############################################################
 
 #############################################################
-#       Buttons
+# Buttons
 
         self.cCurly = JCheckBox("Curly");
         self.cCurly.setToolTipText("When 'Checked' Curly Brackets will surround the Categories")
@@ -96,17 +96,20 @@ class WorkHelper(JFrame):
         bRemoveNBSP_R.setToolTipText("Removes Spaces, Tabs from the end of every text line from the input Area")
         bCopyToInput = JButton("Copy to Input", actionPerformed=self.bCopyToInput)
         bCopyToInput.setToolTipText("Copy the text from the Output Area to the Input Area for further Operations")
-        ok = JButton("OK")
+        
+        bClear = JButton("Clear", actionPerformed=self.bClear)
+        bClear.setToolTipText("Clears the text form both Input and Output text Areas")
+        
         self.iStart = JTextField(maximumSize=Dimension(40,25))
         self.iStart.setToolTipText("The Start Index for the Making of the Categories")
         
         self.RThis = JTextField()
         self.RThis = JTextField(maximumSize=Dimension(120,25))
-        self.RThis.setToolTipText("Text to be replaced")
+        self.RThis.setToolTipText("Text to be replaced or The Starting C_Index")
         
         self.RThat = JTextField()
         self.RThat = JTextField(maximumSize=Dimension(120,25))
-        self.RThat.setToolTipText("Text to be placed")
+        self.RThat.setToolTipText("Text to be placed or The Finish C_Index")
         
         bM_Categories = JButton("Categories", actionPerformed=self.mCategories)
         bM_Categories.setToolTipText("Make Categories using the lines from the Input Area")
@@ -116,7 +119,7 @@ class WorkHelper(JFrame):
 
 
 #############################################################
-#       Aplication Layout 2 groups one Horizontal and one Vertical
+# Aplication Layout 2 groups one Horizontal and one Vertical
         layout.setHorizontalGroup(layout.createSequentialGroup()
             .addGroup(layout.createParallelGroup()
                 .addComponent(Larea1)
@@ -137,7 +140,7 @@ class WorkHelper(JFrame):
             .addGroup(layout.createSequentialGroup()
                 .addComponent(self.RThis)
                 .addComponent(self.RThat))
-                .addComponent(ok))
+                .addComponent(bClear))
             
         )
 
@@ -164,7 +167,7 @@ class WorkHelper(JFrame):
                 
             .addGroup(layout.createParallelGroup()
                 .addComponent(bCopyToInput)
-                .addComponent(ok))
+                .addComponent(bClear))
             .addComponent(Larea2)
             .addGroup(layout.createParallelGroup()
                 .addComponent(Sarea2))
@@ -177,7 +180,7 @@ class WorkHelper(JFrame):
 #############################################################
 
 #############################################################
-#       Aplication Settings
+# Aplication Settings
         self.pack()
         #self.setPreferredSize(Dimension(1000, 1000))
         self.setTitle("Workhelper")
@@ -188,17 +191,17 @@ class WorkHelper(JFrame):
 #############################################################
         
 #############################################################
-#   WorkHelper class methods:
+# WorkHelper class methods:
     def onQuit(self, e):
         "@sig public void setExpression(java.lang.String e)"
         System.exit(0)
 
 
-#    def addToClipBoard(self, text):
-#        "@sig public void setExpression(java.lang.String text)"
-#        command = 'echo ' + text.strip() + '| clip'
-#        os.system(command)
-#   brute method for pasting into clipboard on windows
+# def addToClipBoard(self, text):
+# "@sig public void setExpression(java.lang.String text)"
+# command = 'echo ' + text.strip() + '| clip'
+# os.system(command)
+# brute method for pasting into clipboard on windows
 
 
 
@@ -206,10 +209,10 @@ class WorkHelper(JFrame):
     def mCategories(self, e):
         "@sig public void setExpression(java.lang.String e)"
         """
-        Takes every line of text form the Input Area and by using a
-        string composotion it creates the output in the SPSS dimension
-        categories format.
-        """
+Takes every line of text form the Input Area and by using a
+string composotion it creates the output in the SPSS dimension
+categories format.
+"""
         try:
             StartIndex = int(self.iStart.getText())
         except ValueError:
@@ -280,15 +283,35 @@ class WorkHelper(JFrame):
                 textO=textO+text[lastindex:len(text)].rstrip()
         self.area2.setText(textO)
         
+    def bClear(self, e):
+        "@sig public void setExpression(java.lang.String e)"
+        self.area1.setText("")
+        self.area2.setText("")
+    
+    def bcCat(self, e):
+        "@sig public void setExpression(java.lang.String e)"
+        try:
+            StartIndex = int(self.RThis.getText())
+        except ValueError:
+            StartIndex=1
+        
+        try:
+            FinishIndex = int(self.RThat.getText())
+        except ValueError:
+            FinishIndex=1
+        cCats=""
+        for i in range(StartIndex,FinishIndex+1):
+            if i<>FinishIndex:
+                cCats=cCats+"_"+str(i)+","
+            else:
+                cCats=cCats+"_"+str(i)
+            
+        if StartIndex<FinishIndex:
+            cCats="{"+cCats+"}"
+            self.area2.setText(cCats)
         
                 
 #############################################################
 
 if __name__ == '__main__':
     WorkHelper()
-    
-    
-    
-    
-    
-    
