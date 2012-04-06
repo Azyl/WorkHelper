@@ -90,6 +90,10 @@ class WorkHelper(JFrame):
         self.cCtClipB.setToolTipText("When 'Checked' after the Categories are created they will added to the clipboard")
         self.cCtClipB.setSelected(1)
 
+        self.cSemiC = JCheckBox("SemiColumn");
+        self.cSemiC.setToolTipText("When 'Checked' after the Categories are created at the end will be a semicolomn")
+        self.cSemiC.setSelected(1)        
+        
         bRemoveNBSP_L = JButton("Clean LText", actionPerformed=self.bRemoveNBSP_L)
         bRemoveNBSP_L.setToolTipText("Removes Spaces, Tabs from the start of every text line from the input Area")
         bRemoveNBSP_R = JButton("Clean RText", actionPerformed=self.bRemoveNBSP_R)
@@ -131,8 +135,10 @@ class WorkHelper(JFrame):
             .addGroup(layout.createParallelGroup()
             .addGroup(layout.createSequentialGroup()
                 .addComponent(bM_Categories)
-                .addComponent(self.iStart)
+                .addComponent(self.iStart))
+            .addGroup(layout.createSequentialGroup()
                 .addComponent(self.cCurly)
+                .addComponent(self.cSemiC)
                 .addComponent(self.cCtClipB))
             .addGroup(layout.createSequentialGroup()
                 .addComponent(bRemoveNBSP_L)
@@ -153,8 +159,10 @@ class WorkHelper(JFrame):
                 .addGroup(layout.createSequentialGroup()
                     .addGroup(layout.createParallelGroup()
                         .addComponent(bM_Categories)
-                        .addComponent(self.iStart)
+                        .addComponent(self.iStart))
+                    .addGroup(layout.createParallelGroup()
                         .addComponent(self.cCurly)
+                        .addComponent(self.cSemiC)
                         .addComponent(self.cCtClipB))
                     .addGroup(layout.createParallelGroup()
                         .addComponent(bRemoveNBSP_L)
@@ -241,6 +249,8 @@ categories format.
         if len(textO)>0:
             if self.cCurly.isSelected():
                 textO = "{\n"+ textO + "\n}"
+                if self.cSemiC.isSelected():
+                    textO = textO + ";"
             if self.cCtClipB.isSelected():
                 stringSelection = StringSelection(textO)
                 self.clipboard.setContents(stringSelection, None)
