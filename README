@@ -3,3 +3,18 @@ This program has been build for removing the need to manually alter text.
 Text that is comming from word file, questionnaires, and may have all kind of extra unwanted things.
 
 It is made to help the persons that are using the IBM SPSS DIMENSION aplication suite.
+
+Requirements 
+
+Java and Jython (is provided with the aplication) (i recomend getting the latest version from the official website)
+
+
+Install
+
+After java and jython is instaled just run: 
+
+execfile('test.py')
+
+in the jython interpreter.
+
+If you have any comments bugs or request please use the Wiki made for this aplication.
