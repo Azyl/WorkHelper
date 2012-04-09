@@ -122,6 +122,12 @@ class WorkHelper(JFrame):
         bcCat = JButton("CreatCateg", actionPerformed=self.bcCat)
         bcCat.setToolTipText("Create a categorical form starting C_Index to finish C_Index; Use the above text boxes to define the indexes")
         
+        
+        bC_S = JButton("Create _Series", actionPerformed=self.bC_S)
+        bC_S.setToolTipText("Create a series form starting C_Index to finish C_Index; Use the above text boxes to define the indexes; It will create a series for every row in the Input Area")
+
+        
+        
         bM_Categories = JButton("Categories", actionPerformed=self.mCategories)
         bM_Categories.setToolTipText("Make Categories using the lines from the Input Area")
         #bM_Categories = JButton(maximumSize=Dimension(40,25))
@@ -156,6 +162,8 @@ class WorkHelper(JFrame):
             .addGroup(layout.createSequentialGroup()
                 .addComponent(bSandReplace)
                 .addComponent(bcCat))
+            .addGroup(layout.createSequentialGroup()
+                .addComponent(bC_S))
                 
                 .addComponent(bClear))
             
@@ -184,6 +192,10 @@ class WorkHelper(JFrame):
                     .addGroup(layout.createParallelGroup()   
                         .addComponent(bSandReplace)
                         .addComponent(bcCat))
+                    .addGroup(layout.createParallelGroup()
+                        .addComponent(bC_S))
+                        
+                        
                         )
                     )
                 
@@ -196,7 +208,7 @@ class WorkHelper(JFrame):
         )
         
         #layout.linkSize(SwingConstants.HORIZONTAL, [ok, bCopyToInput, close, bM_Categories])
-        layout.linkSize(SwingConstants.HORIZONTAL, [self.RThis,self.RThat,bRemoveNBSP_L,bRemoveNBSP_R,bCopyToInput,bM_Categories,bSandReplace,bcCat])
+        layout.linkSize(SwingConstants.HORIZONTAL, [self.RThis,self.RThat,bRemoveNBSP_L,bRemoveNBSP_R,bCopyToInput,bM_Categories,bSandReplace,bcCat,bC_S])
         
         #layout.linkSize(SwingConstants.HORIZONTAL, [self.cCurly,bM_Categories])
 #############################################################
@@ -341,6 +353,46 @@ categories format.
         
     def bSandReplace(self, e):
         self.area2.setText(self.area1.getText().replace(self.RThis.getText(),self.RThat.getText()))
+        
+    def bC_S(self, e):
+        "@sig public void setExpression(java.lang.String e)"
+        try:
+            StartIndex = int(self.RThis.getText())
+        except ValueError:
+            StartIndex=1
+        
+        try:
+            FinishIndex = int(self.RThat.getText())
+        except ValueError:
+            FinishIndex=1
+        
+        if StartIndex<FinishIndex:
+            text=self.area1.getText().rstrip()
+            lastindex=0
+            textO=""
+            
+            for i in range(0,len(text)):
+                    if text[i]=='\n':
+                        counter=StartIndex
+                        for j in range(StartIndex,FinishIndex+1):
+                            textO=textO+(text[lastindex:i]+"_"+str(counter)+" ")
+                            counter=counter+1
+                        lastindex=i+1
+                        textO=textO+'\n'
+
+            #if len(text[lastindex:len(text)])>0:
+            #        textO=textO+("_"+str(counter)+' "'+text[lastindex:len(text)]+'"')
+
+            if lastindex==0 and len(text)>0:
+                counter=StartIndex
+                for j in range(StartIndex,FinishIndex+1):
+                    textO=textO+(text[lastindex:i]+"_"+str(counter)+" ")
+                    counter=counter+1
+            
+            if len(textO)>0:
+                self.copyToClipboard(textO)    
+                self.area2.setText(textO)
+        
 #############################################################
 
 if __name__ == '__main__':
