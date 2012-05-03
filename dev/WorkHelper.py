@@ -158,6 +158,14 @@ class WorkHelper(JFrame):
         self.RThat = JTextField()
         self.RThat = JTextField(maximumSize=Dimension(120,25))
         self.RThat.setToolTipText("Text to be placed or The Finish C_Index")
+        
+        self.ReplaceThis = JTextField()
+        self.ReplaceThis = JTextField(maximumSize=Dimension(120,25))
+        self.ReplaceThis.setToolTipText("Text to be replaced")
+
+        self.ReplaceThat = JTextField()
+        self.ReplaceThat = JTextField(maximumSize=Dimension(120,25))
+        self.ReplaceThat.setToolTipText("Text to be placed")
 
 
         bSandReplace = JButton("Replace Text", actionPerformed=self.bSandReplace)
@@ -175,8 +183,7 @@ class WorkHelper(JFrame):
 
 #############################################################
 # Aplication Layouts: 2 groups one Horizontal and one Vertical
-
-
+        
         #############################################################
         # Frame Layout: 2 groups one Horizontal and one Vertical
         layout.setHorizontalGroup(layout.createSequentialGroup()
@@ -209,7 +216,30 @@ class WorkHelper(JFrame):
 
         #############################################################
         # TEdit Layout: 2 groups one Horizontal and one Vertical
-
+        layout2.setHorizontalGroup(layout2.createSequentialGroup()
+            .addGroup(layout2.createParallelGroup()
+                .addGroup(layout2.createSequentialGroup()
+                    .addComponent(bRemoveNBSP_L)
+                    .addComponent(bRemoveNBSP_R))
+                    .addGroup(layout2.createSequentialGroup()
+                    .addComponent(bSandReplace)
+                    .addComponent(self.ReplaceThis)
+                    .addComponent(self.ReplaceThat))  
+                      
+                      
+                      
+                                   ))
+        
+        layout2.setVerticalGroup(layout2.createSequentialGroup()
+            .addGroup(layout2.createParallelGroup()
+                .addComponent(bRemoveNBSP_L)
+                .addComponent(bRemoveNBSP_R))
+                                 
+                .addGroup(layout2.createParallelGroup()
+                    .addComponent(bSandReplace)
+                    .addComponent(self.ReplaceThis)
+                    .addComponent(self.ReplaceThat))  
+                                 )
             
             
         #############################################################
@@ -224,14 +254,12 @@ class WorkHelper(JFrame):
                 .addComponent(self.cCurly)
                 .addComponent(self.cSemiC)
                 .addComponent(self.cCtClipB))
-            .addGroup(layout3.createSequentialGroup()
-                .addComponent(bRemoveNBSP_L)
-                .addComponent(bRemoveNBSP_R))
+           
             .addGroup(layout3.createSequentialGroup()
                 .addComponent(self.RThis)
                 .addComponent(self.RThat))
             .addGroup(layout3.createSequentialGroup()
-                .addComponent(bSandReplace)
+                
                 .addComponent(bcCat))
 
                 )
@@ -246,14 +274,12 @@ class WorkHelper(JFrame):
                         .addComponent(self.cCurly)
                         .addComponent(self.cSemiC)
                         .addComponent(self.cCtClipB))
-                    .addGroup(layout3.createParallelGroup()
-                        .addComponent(bRemoveNBSP_L)
-                        .addComponent(bRemoveNBSP_R))
+                   
                     .addGroup(layout3.createParallelGroup()
                         .addComponent(self.RThis)
                         .addComponent(self.RThat))
                     .addGroup(layout3.createParallelGroup()
-                        .addComponent(bSandReplace)
+                        
                         .addComponent(bcCat)
                                 )
                         )
@@ -408,7 +434,7 @@ categories format.
             self.area2.setText(cCats)
 
     def bSandReplace(self, e):
-        self.area2.setText(self.area1.getText().replace(self.RThis.getText(),self.RThat.getText()))
+        self.area2.setText(self.area1.getText().replace(self.ReplaceThis.getText(),self.ReplaceThat.getText()))
 #############################################################
 
 if __name__ == '__main__':
