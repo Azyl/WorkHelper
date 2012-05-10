@@ -67,7 +67,11 @@ class WorkHelper(JFrame):
 
         bCopyToInput = JButton("Copy to Input", actionPerformed=self.bCopyToInput)
         bCopyToInput.setToolTipText("Copy the text from the Output Area to the Input Area for further Operations")
-
+        
+        self.cCtClipB = JCheckBox("Auto-Copy");
+        self.cCtClipB.setToolTipText("When 'Checked' after the Categories are created they will added to the clipboard")
+        self.cCtClipB.setSelected(1)
+        
         Larea2 = JLabel("OutputArea:")
         
         Sarea2 = JScrollPane()
@@ -90,6 +94,24 @@ class WorkHelper(JFrame):
         layout2.setAutoCreateContainerGaps(True)
         panel_TEdit.setLayout(layout2)
         
+        bRemoveNBSP_L = JButton("Clean LText", actionPerformed=self.bRemoveNBSP_L)
+        bRemoveNBSP_L.setToolTipText("Removes Spaces, Tabs from the start of every text line from the input Area")
+        bRemoveNBSP_R = JButton("Clean RText", actionPerformed=self.bRemoveNBSP_R)
+        bRemoveNBSP_R.setToolTipText("Removes Spaces, Tabs from the end of every text line from the input Area")
+    
+        
+        self.ReplaceThis = JTextField()
+        self.ReplaceThis = JTextField(maximumSize=Dimension(120,25))
+        self.ReplaceThis.setToolTipText("Text to be replaced")
+
+        self.ReplaceThat = JTextField()
+        self.ReplaceThat = JTextField(maximumSize=Dimension(120,25))
+        self.ReplaceThat.setToolTipText("Text to be placed")
+
+        bSandReplace = JButton("Replace Text", actionPerformed=self.bSandReplace)
+        bSandReplace.setToolTipText("Replace the text from This with Text from That in the Text from the Input Area and displays it in the Output Area")
+
+
         #####################################################
         # Dimension pane
         panel_Dimensions = JPanel()
@@ -98,6 +120,32 @@ class WorkHelper(JFrame):
         layout3.setAutoCreateContainerGaps(True)
         panel_Dimensions.setLayout(layout3)
         
+        
+        self.cCurly = JCheckBox("Curly");
+        self.cCurly.setToolTipText("When 'Checked' Curly Brackets will surround the Categories")
+        self.cCurly.setSelected(1)
+
+        self.cSemiC = JCheckBox("SemiColumn");
+        self.cSemiC.setToolTipText("When 'Checked' after the Categories are created at the end will be a semicolomn")
+        self.cSemiC.setSelected(1)
+
+        self.iStart = JTextField(maximumSize=Dimension(40,25))
+        self.iStart.setToolTipText("The Start Index for the Making of the Categories")
+
+        self.RThis = JTextField()
+        self.RThis = JTextField(maximumSize=Dimension(120,25))
+        self.RThis.setToolTipText("The Starting Index used in creating the Categorical")
+
+        self.RThat = JTextField()
+        self.RThat = JTextField(maximumSize=Dimension(120,25))
+        self.RThat.setToolTipText("The Finish Index used in creating the Categorical")
+        
+        optioncCategories = JLabel("Options:")
+        bcCat = JButton("CreatCateg", actionPerformed=self.bcCat)
+        bcCat.setToolTipText("Create a categorical form starting C_Index to finish C_Index; Use the text boxes to define the indexes")
+
+        bM_Categories = JButton("Categories", actionPerformed=self.mCategories)
+        bM_Categories.setToolTipText("Make Categories using the lines from the Input Area. Use it to define Categorical questions.")
         #####################################################
         # ConfirmIt pane
         panel_ConfirmIt = JPanel()
@@ -114,6 +162,13 @@ class WorkHelper(JFrame):
         layout5.setAutoCreateContainerGaps(True)
         panel_Statistics.setLayout(layout5)         
         
+        #####################################################
+        # TimeTraking pane
+        panel_TimeTraking = JPanel()
+        layout6 = GroupLayout(panel_TimeTraking)
+        layout6.setAutoCreateGaps(True)
+        layout6.setAutoCreateContainerGaps(True)
+        panel_TimeTraking.setLayout(layout6)     
         
         #####################################################
         # Tabbed Area Tabs
@@ -121,64 +176,12 @@ class WorkHelper(JFrame):
         tabPane.addTab("Dimensions", panel_Dimensions)
         tabPane.addTab("ConfirmIt", panel_ConfirmIt)
         tabPane.addTab("Statistics", panel_Statistics)
+        tabPane.addTab("TimeTraking", panel_TimeTraking)
         
         
 #############################################################
 
-#############################################################
-# Buttons
 
-        self.cCurly = JCheckBox("Curly");
-        self.cCurly.setToolTipText("When 'Checked' Curly Brackets will surround the Categories")
-        self.cCurly.setSelected(1)
-
-
-        self.cCtClipB = JCheckBox("Auto-Copy");
-        self.cCtClipB.setToolTipText("When 'Checked' after the Categories are created they will added to the clipboard")
-        self.cCtClipB.setSelected(1)
-
-        self.cSemiC = JCheckBox("SemiColumn");
-        self.cSemiC.setToolTipText("When 'Checked' after the Categories are created at the end will be a semicolomn")
-        self.cSemiC.setSelected(1)
-
-        bRemoveNBSP_L = JButton("Clean LText", actionPerformed=self.bRemoveNBSP_L)
-        bRemoveNBSP_L.setToolTipText("Removes Spaces, Tabs from the start of every text line from the input Area")
-        bRemoveNBSP_R = JButton("Clean RText", actionPerformed=self.bRemoveNBSP_R)
-        bRemoveNBSP_R.setToolTipText("Removes Spaces, Tabs from the end of every text line from the input Area")
-
-
-
-        self.iStart = JTextField(maximumSize=Dimension(40,25))
-        self.iStart.setToolTipText("The Start Index for the Making of the Categories")
-
-        self.RThis = JTextField()
-        self.RThis = JTextField(maximumSize=Dimension(120,25))
-        self.RThis.setToolTipText("Text to be replaced or The Starting C_Index")
-
-        self.RThat = JTextField()
-        self.RThat = JTextField(maximumSize=Dimension(120,25))
-        self.RThat.setToolTipText("Text to be placed or The Finish C_Index")
-        
-        self.ReplaceThis = JTextField()
-        self.ReplaceThis = JTextField(maximumSize=Dimension(120,25))
-        self.ReplaceThis.setToolTipText("Text to be replaced")
-
-        self.ReplaceThat = JTextField()
-        self.ReplaceThat = JTextField(maximumSize=Dimension(120,25))
-        self.ReplaceThat.setToolTipText("Text to be placed")
-
-
-        bSandReplace = JButton("Replace Text", actionPerformed=self.bSandReplace)
-        bSandReplace.setToolTipText("Replace the text from This with Thext from That in the Text from the Input Area and displays it in the Output Area")
-
-        bcCat = JButton("CreatCateg", actionPerformed=self.bcCat)
-        bcCat.setToolTipText("Create a categorical form starting C_Index to finish C_Index; Use the above text boxes to define the indexes")
-
-        bM_Categories = JButton("Categories", actionPerformed=self.mCategories)
-        bM_Categories.setToolTipText("Make Categories using the lines from the Input Area")
-        #bM_Categories = JButton(maximumSize=Dimension(40,25))
-        # de incercat daca merge cu ; sa grupezi in [dsa] elementele
-#############################################################
 
 
 #############################################################
@@ -193,7 +196,8 @@ class WorkHelper(JFrame):
                 .addComponent(Sarea2)
                 .addGroup(layout.createSequentialGroup()
                           .addComponent(bCopyToInput)
-                          .addComponent(bClear))
+                          .addComponent(bClear)
+                          .addComponent(self.cCtClipB))
                 .addComponent(Larea2))
             .addGroup(layout.createParallelGroup()
                 .addComponent(tabPane))
@@ -206,7 +210,8 @@ class WorkHelper(JFrame):
                           .addComponent(Sarea1)
                           .addGroup(layout.createParallelGroup()
                                     .addComponent(bCopyToInput)
-                                    .addComponent(bClear))
+                                    .addComponent(bClear)
+                                    .addComponent(self.cCtClipB)    )
                           .addComponent(Larea2)
                           .addComponent(Sarea2))
                       .addGroup(layout.createSequentialGroup()
@@ -251,16 +256,18 @@ class WorkHelper(JFrame):
                 .addComponent(bM_Categories)
                 .addComponent(self.iStart))
             .addGroup(layout3.createSequentialGroup()
+                .addComponent(optioncCategories)
                 .addComponent(self.cCurly)
                 .addComponent(self.cSemiC)
-                .addComponent(self.cCtClipB))
+                )
            
             .addGroup(layout3.createSequentialGroup()
+                .addComponent(bcCat)
                 .addComponent(self.RThis)
                 .addComponent(self.RThat))
             .addGroup(layout3.createSequentialGroup()
                 
-                .addComponent(bcCat))
+                )
 
                 )
         )
@@ -270,17 +277,19 @@ class WorkHelper(JFrame):
                     .addGroup(layout3.createParallelGroup()
                         .addComponent(bM_Categories)
                         .addComponent(self.iStart))
+                    
                     .addGroup(layout3.createParallelGroup()
-                        .addComponent(self.cCurly)
-                        .addComponent(self.cSemiC)
-                        .addComponent(self.cCtClipB))
-                   
-                    .addGroup(layout3.createParallelGroup()
+                        .addComponent(bcCat)
                         .addComponent(self.RThis)
                         .addComponent(self.RThat))
                     .addGroup(layout3.createParallelGroup()
                         
-                        .addComponent(bcCat)
+                    .addGroup(layout3.createParallelGroup()
+                        .addComponent(optioncCategories)
+                        .addComponent(self.cCurly)
+                        .addComponent(self.cSemiC)
+                        )
+                   
                                 )
                         )
             
@@ -290,7 +299,7 @@ class WorkHelper(JFrame):
         
         #layout2.linkSize(SwingConstants.HORIZONTAL, [self.cCurly,bM_Categories])
         #layout.linkSize(SwingConstants.HORIZONTAL, [ok, bCopyToInput, close, bM_Categories])
-        layout3.linkSize(SwingConstants.HORIZONTAL, [self.RThis,self.RThat,bRemoveNBSP_L,bRemoveNBSP_R,bM_Categories,bSandReplace,bcCat])
+        #layout3.linkSize(SwingConstants.HORIZONTAL, [self.RThis,self.RThat,bRemoveNBSP_L,bRemoveNBSP_R,bM_Categories,bSandReplace,bcCat])
 
         
 #############################################################
@@ -325,10 +334,10 @@ class WorkHelper(JFrame):
     def mCategories(self, e):
         "@sig public void setExpression(java.lang.String e)"
         """
-Takes every line of text form the Input Area and by using a
-string composotion it creates the output in the SPSS dimension
-categories format.
-"""
+        Takes every line of text form the Input Area and by using a
+        string composition it creates the output in the SPSS dimension
+        categories format.
+        """
         try:
             StartIndex = int(self.iStart.getText())
         except ValueError:
