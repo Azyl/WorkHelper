@@ -154,6 +154,25 @@ class WorkHelper(JFrame):
         layout4.setAutoCreateContainerGaps(True)
         panel_ConfirmIt.setLayout(layout4)
         
+        self.PID = JTextField()
+        self.PID = JTextField(maximumSize=Dimension(120,25))
+        self.PID.setToolTipText("The PID number used for creating links with PID and ids from every line of the Input Area")
+        
+        bClinks = JButton("Create Links", actionPerformed=self.bClinks)
+        bClinks.setToolTipText("Create links for a project using PID and ID, ID`s are read from every line of the Input Area")
+        
+        bClinksNA = JButton("Create Links NA ", actionPerformed=self.bClinksNA)
+        bClinksNA.setToolTipText("Create links for a project using PID and ID`s from the standard sample test for US")
+        
+        bClinksCA = JButton("Create Links CA", actionPerformed=self.bClinksCA)
+        bClinksCA.setToolTipText("Create links for a project using PID and ID`s from the standard sample test for CA")
+        
+        self.Width = JTextField()
+        self.Width = JTextField(maximumSize=Dimension(120,25))
+        self.Width.setToolTipText("The Width used in creating the DIV html tag, note the dimension used is in px")
+        
+        baddDIVt = JButton("Add DIV tag", actionPerformed=self.baddDIVt)
+        baddDIVt.setToolTipText("Create a DIV tag for every line in the Input Area")
         #####################################################
         # Statistics pane
         panel_Statistics = JPanel()
@@ -294,7 +313,45 @@ class WorkHelper(JFrame):
                         )
             
             )
+        #############################################################
+        # ConfimIT Layout: 2 groups one Horizontal and one Vertical
+        layout4.setHorizontalGroup(layout4.createSequentialGroup()
         
+         .addGroup(layout4.createParallelGroup()
+            .addGroup(layout4.createSequentialGroup()
+                .addComponent(bClinks)
+                .addComponent(self.PID)
+                )
+            .addGroup(layout4.createSequentialGroup()
+                .addComponent(bClinksNA)
+                .addComponent(bClinksCA)
+                )
+            .addGroup(layout4.createSequentialGroup()
+                .addComponent(baddDIVt)
+                .addComponent(self.Width)
+                
+                )
+                
+                ))
+        
+        
+        layout4.setVerticalGroup(layout4.createSequentialGroup()
+            .addGroup(layout4.createSequentialGroup()
+                    .addGroup(layout4.createParallelGroup()
+                        .addComponent(bClinks)
+                        .addComponent(self.PID))
+                    .addGroup(layout4.createParallelGroup()
+                        .addComponent(bClinksNA)
+                        .addComponent(bClinksCA)
+                        )
+                    
+                    .addGroup(layout4.createParallelGroup()
+                        .addComponent(baddDIVt)
+                        .addComponent(self.Width)
+                        )
+                    
+                        
+                        ))
         
         
         #layout2.linkSize(SwingConstants.HORIZONTAL, [self.cCurly,bM_Categories])
@@ -444,6 +501,96 @@ class WorkHelper(JFrame):
 
     def bSandReplace(self, e):
         self.area2.setText(self.area1.getText().replace(self.ReplaceThis.getText(),self.ReplaceThat.getText()))
+        self.copyToClipboard(self.area2.getText())
+
+    #############################################################
+    # Confirmit
+    def bClinks(self, e):
+    
+    
+        text=self.area1.getText().rstrip()
+
+        lastindex=0
+        textO=""
+
+        for i in range(0,len(text)):
+                if text[i]=='\n':
+                    textO=textO+'http://surveys.ipsosinteractive.com/surveys2/?pid='+self.PID.getText()+'&id='+text[lastindex:i]+'\n'
+                    lastindex=i+1
+
+        if len(text[lastindex:len(text)])>0:
+                textO=textO+'http://surveys.ipsosinteractive.com/surveys2/?pid='+self.PID.getText()+'&id='+text[lastindex:len(text)]
+
+        self.copyToClipboard(textO)
+        self.area2.setText(textO)
+        
+    def bClinksNA(self, e):
+        
+        
+        output=""
+        
+        for i in range (1,201):
+        
+            if i<10:
+                output=output+'http://surveys.ipsosinteractive.com/surveys2/?pid='+self.PID.getText()+'&id='+'US9900'+str(i)+'\n'
+            else:
+                if i<100:
+                    output=output+'http://surveys.ipsosinteractive.com/surveys2/?pid='+self.PID.getText()+'&id='+'US990'+str(i)+'\n'
+                else:
+                    if i==200:
+                        output=output+'http://surveys.ipsosinteractive.com/surveys2/?pid='+self.PID.getText()+'&id='+'US99'+str(i)
+                    else: 
+                        output=output+'http://surveys.ipsosinteractive.com/surveys2/?pid='+self.PID.getText()+'&id='+'US99'+str(i)+'\n'
+        
+        
+        self.area2.setText(output)
+        self.copyToClipboard(self.area2.getText())
+        
+    def bClinksCA(self, e):
+        output=""
+        
+        for i in range (1,201):
+        
+            if i<10:
+                output=output+'http://surveys.ipsosinteractive.com/surveys2/?pid='+self.PID.getText()+'&id='+'CA9900'+str(i)+'\n'
+            else:
+                if i<100:
+                    output=output+'http://surveys.ipsosinteractive.com/surveys2/?pid='+self.PID.getText()+'&id='+'CA990'+str(i)+'\n'
+                else:
+                    if i==200:
+                        output=output+'http://surveys.ipsosinteractive.com/surveys2/?pid='+self.PID.getText()+'&id='+'CA99'+str(i)
+                    else: 
+                        output=output+'http://surveys.ipsosinteractive.com/surveys2/?pid='+self.PID.getText()+'&id='+'CA99'+str(i)+'\n'
+        
+        
+        self.area2.setText(output)
+        self.copyToClipboard(self.area2.getText())
+        
+    def baddDIVt(self, e):
+        
+        try:
+            Width = int(self.Width.getText())
+        except ValueError:
+            Width=1
+            
+        text=self.area1.getText().rstrip()
+
+        lastindex=0
+        textO=""
+
+        for i in range(0,len(text)):
+            if text[i]=='\n':
+                textO=textO+'<div style="width:'+str(Width)+'px">'+text[lastindex:i]+'</div>'+'\n'
+                lastindex=i+1
+
+        if len(text[lastindex:len(text)])>0:
+            textO=textO+'<div style="width:'+str(Width)+'px">'+text[lastindex:len(text)]+'</div>'
+            
+
+        self.copyToClipboard(textO)
+        self.area2.setText(textO)
+        
+        
 #############################################################
 
 if __name__ == '__main__':
