@@ -32,6 +32,7 @@ from javax.swing import JTabbedPane
 from javax.swing import JPanel
 
 import os
+#import re
 
 
 
@@ -111,7 +112,8 @@ class WorkHelper(JFrame):
         bSandReplace = JButton("Replace Text", actionPerformed=self.bSandReplace)
         bSandReplace.setToolTipText("Replace the text from This with Text from That in the Text from the Input Area and displays it in the Output Area")
 
-
+        bRemNumbers = JButton("Rem Numbers", actionPerformed=self.RemNumbers)
+        bRemNumbers.setToolTipText("Removes numbers from the start of every line")
         #####################################################
         # Dimension pane
         panel_Dimensions = JPanel()
@@ -243,6 +245,7 @@ class WorkHelper(JFrame):
         layout2.setHorizontalGroup(layout2.createSequentialGroup()
             .addGroup(layout2.createParallelGroup()
                 .addGroup(layout2.createSequentialGroup()
+                    .addComponent(bRemNumbers)
                     .addComponent(bRemoveNBSP_L)
                     .addComponent(bRemoveNBSP_R))
                     .addGroup(layout2.createSequentialGroup()
@@ -256,6 +259,7 @@ class WorkHelper(JFrame):
         
         layout2.setVerticalGroup(layout2.createSequentialGroup()
             .addGroup(layout2.createParallelGroup()
+                .addComponent(bRemNumbers)
                 .addComponent(bRemoveNBSP_L)
                 .addComponent(bRemoveNBSP_R))
                                  
@@ -590,7 +594,23 @@ class WorkHelper(JFrame):
         self.copyToClipboard(textO)
         self.area2.setText(textO)
         
+    def RemNumbers(self, e):
+        text=self.area1.getText().rstrip()
+
+        lastindex=0
+        textO=""
         
+        
+        for i in range(0,len(text)):
+            if text[i]=='\n':
+                textO=textO+text[lastindex:i].lstrip('1234567890')+'\n'
+                lastindex=i+1
+        if len(text[lastindex:len(text)])>0:
+            textO=textO+text[lastindex:len(text)].lstrip('1234567890')
+            
+
+        self.copyToClipboard(textO)
+        self.area2.setText(textO)
 #############################################################
 
 if __name__ == '__main__':
