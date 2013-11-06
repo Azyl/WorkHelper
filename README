@@ -17,4 +17,13 @@ execfile('test.py')
 
 in the jython interpreter.
 
+
+
+If you prefer to use the standalone version of Jython please run Jython:
+
+java -jar jython-standalone-2.7-b1.jar
+
+and then execfile('test.py')
+
+
 If you have any comments bugs or request please use the Wiki made for this aplication.
