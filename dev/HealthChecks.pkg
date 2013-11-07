@@ -1,0 +1,1296 @@
+CREATE OR REPLACE PACKAGE CRISOFTADM
+AS
+    type array is table of varchar2(255);
+    PROCEDURE health_check(
+            path     VARCHAR2,
+            filename VARCHAR2) ;
+    FUNCTION printStyle
+        RETURN VARCHAR2;
+    FUNCTION resources(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION tablespaces(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION dbdatafiles(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION invalidObjects(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION deadlocks(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION unextendableObjects(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION top10CPUusage(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION top10LongOperations(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION top10IdleSesions(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION temporaryTablespaces(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION statisticsJobRun(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION backUpRman(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    FUNCTION backUpRmanDetails(
+            tableNR NUMBER)
+        RETURN VARCHAR2;
+    PROCEDURE html_email(
+        p_to            IN VARCHAR2,
+        p_from          IN VARCHAR2,
+            p_subject       IN VARCHAR2,
+            p_text          IN VARCHAR2,
+            p_html          IN VARCHAR2,
+            p_smtp_hostname IN VARCHAR2,
+            p_smtp_portnum  IN VARCHAR2) ;
+            
+        PROCEDURE html_email_v2(
+            p_to           in array default array(),
+            p_cc           in array default array(),
+            p_bcc          in array default array(),
+            p_from          IN VARCHAR2,
+            p_subject       IN VARCHAR2,
+            p_text          IN VARCHAR2,
+            p_html          IN VARCHAR2,
+            p_smtp_hostname IN VARCHAR2,
+            p_smtp_portnum  IN VARCHAR2) ;    
+            
+    FUNCTION cssReset
+        RETURN VARCHAR2;
+    PROCEDURE email_send(
+            p_job_id NUMBER) ;
+            
+FUNCTION createTableHTML (t_id NUMBER) RETURN VARCHAR2;
+
+  FUNCTION address_email( p_string IN VARCHAR2,
+                           p_recipients in array, l_connection utl_smtp.connection ) return varchar2;
+
+END CRISOFTADM;
+/
+
+
+CREATE OR REPLACE PACKAGE BODY CRISOFTADM
+AS
+PROCEDURE health_check(
+        path     VARCHAR2,
+        filename VARCHAR2)
+AS
+    resource_limit VARCHAR2(2000) ;
+    cnt            INTEGER;
+    html_body      VARCHAR2(32000) ;
+    recipient      VARCHAR2(200) ;
+    frrom          VARCHAR2(200) ;
+    subject        VARCHAR2(4000) ;
+    maxEmailID     NUMBER;
+    instanceName   VARCHAR2(4000) ;
+    hostName       VARCHAR2(4000) ;
+    smtphostName   VARCHAR2(200) ;
+    smtpPortNumber VARCHAR2(6) ;
+BEGIN
+    SELECT instance_name, host_name INTO instanceName, hostName FROM v$instance;
+    SELECT
+            MAX(job_id) + 1
+        INTO
+            maxEmailID
+        FROM
+            email_message;
+    smtphostName   := 'localhost';
+    smtpPortNumber := '465';
+    recipient      := 'andrei.tataru@mdlz.com';
+    frrom          := 'Crisoft_Admins@crisoft.ro';
+    --frrom := 'andrei.tataru@crisoft.ro';
+    subject := 'Health Check on '|| instanceName || ' ' || hostName || ' at ' || TO_CHAR(SYSDATE) ;
+    dbms_output.put_line(subject) ;
+    html_body := '<!DOCTYPE html>
+<html> 
+<head>  
+';
+    html_body := html_body || printStyle ||' 
+</head> 
+
+<body>';
+    html_body := html_body || '<h1>'|| subject || '</h1>' || '<br><br><br>' || resources(tableNR=>1) || '<br><br><br>'
+    || tablespaces(tableNR=>2) || '<br><br><br>' || dbdatafiles(tableNR=>3) || '<br><br><br>' || invalidObjects(tableNR
+    =>4) || '<br><br><br>' || deadlocks(tableNR=>5) || '<br><br><br>' || unextendableObjects(tableNR=>6) ||
+    '<br><br><br>' || top10CPUusage(tableNR=>7) || '<br><br><br>' || top10LongOperations(tableNR=>8) || '<br><br><br>'
+    || temporaryTablespaces(tableNR=>9) || '<br><br><br>' || top10IdleSesions(tableNR=>10) || '<br><br><br>' ||
+    statisticsJobRun(tableNR=>11) || '<br><br><br>' || backUpRman(tableNR=>12) || '<br><br><br>' || backUpRmanDetails(
+    tableNR=>13) ||'</body></html>';
+    dbms_output.put_line(html_body) ;
+    
+    --INSERT INTO email_message VALUES (maxEmailID,recipient,frrom,to_clob(html_body),'N');
+    --COMMIT;
+    --dbms_output.put_line('inserted into EMAIL_MESSAGE');
+    --html_email(p_to => recipient, p_from => frrom, p_subject => subject, p_text=> '-------', p_html => html_body,
+    --p_smtp_hostname=>smtphostName, p_smtp_portnum => smtpPortNumber) ;
+    
+    html_email_v2(p_to => crisoftadm.array( 'andrei.tataru@mdlz.com','andrei.tataru@crisoft.ro' ),
+      p_cc => crisoftadm.array( 'andrei.tataru@mdlz.com' ),
+      p_bcc => crisoftadm.ARRAY( 'andrei.tataru@mdlz.com' ), 
+      p_from => frrom, p_subject => subject, p_text=> '-------', p_html => html_body,
+      p_smtp_hostname=>smtphostName, p_smtp_portnum => smtpPortNumber) ;
+    
+    
+    --mail_pkg.array( 'tkyte@us.oracle.com','thomas.kyte@oracle.com' )
+    
+    --email_send('1');
+END health_check;
+FUNCTION cssReset
+    RETURN VARCHAR2
+IS
+BEGIN
+    RETURN
+    'body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,form,fieldset,input,textarea,p,blockquote,th,td {  
+margin:0; 
+padding:0;
+}
+html,body { 
+margin:0; 
+padding:0;
+}
+table { 
+border-collapse:collapse; 
+border-spacing:0;
+}
+fieldset,img {  
+border:0;
+}
+input{ 
+border:1px solid #b0b0b0; 
+padding:3px 5px 4px; 
+color:#979797; 
+width:190px;
+}
+address,caption,cite,code,dfn,th,var { 
+font-style:normal; 
+font-weight:normal;
+}
+ol,ul { 
+list-style:none;
+}
+caption,th { 
+text-align:left;
+}
+h1,h2,h3,h4,h5,h6 { 
+font-size:100%; 
+font-weight:normal;
+}
+q:before,q:after { 
+content:'''';
+}
+abbr,acronym { border:0;
+}'
+    ;
+END cssReset;
+FUNCTION printStyle
+    RETURN VARCHAR2
+AS
+BEGIN
+    RETURN '<style>   
+'||
+    --cssReset ||
+    ' 
+table {    
+font-family:"Trebuchet MS", Arial, Helvetica, sans-serif;    
+width:100%;                
+heigth:100%;    
+border-collapse:collapse;   
+}   
+
+td {    
+font-size:1em;
+text-align:center;
+border:1px solid #0041C2;    
+padding:3px 7px 2px 7px;   
+}   
+
+th {    
+font-size:1em;
+text-align:center;
+border:1px solid #0041C2;    
+padding:3px 7px 2px 7px;    
+font-size:1.1em;    
+padding-top:5px;    
+padding-bottom:4px;    
+background-color:#0041C2;    
+color:#ffffff;   
+}   
+
+
+tr.alt td    
+{    
+color:#000000;    
+background-color:#659EC7;   
+}      
+
+tr.alterr td    
+{    
+color:#FFFFFF;    
+background-color:#F70D1A;   
+}    
+
+caption {
+color:#ffffff;
+border:1px solid #F70A1A;
+background-color:#7D0552;
+caption-side:top;   
+}
+
+h1 {
+text-align:center;
+}
+
+</style> '
+    ;
+END printStyle;
+FUNCTION resources(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '        
+<table>    
+<caption>Table '|| tableNR ||
+    ': Resource usage</caption> 
+<tr>   
+<th>Resource name</th>   
+<th>Curent Utilization</th>   
+<th>Initial Allocation</th>      
+<th>Max Utilization</th>      
+<th>Limit value</th> 
+</tr>
+'
+    ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                *
+            FROM
+                V$RESOURCE_LIMIT
+            WHERE
+                resource_name IN('processes', 'sessions', 'enqueue_locks', 'max_rollback_segments')
+    )
+    LOOP
+        IF i.limit_value - i.current_utilization < 15 THEN
+            res                                 := res||'<tr class="alterr">'|| CHR(13) || CHR(10) ;
+        ELSE
+            IF mod(cnt, 2) = 0 THEN
+                res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+            ELSE
+                res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+            END IF;
+        END IF;
+        res := res|| '<td>' || i.resource_name || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.current_utilization || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.initial_allocation || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.max_utilization || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.limit_value || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="4">' || 'No Resources found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END resources;
+FUNCTION tablespaces(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '        
+<table>    
+<caption>Table '|| tableNR ||
+    ': Tablespace utilization</caption> 
+<tr>   
+<th>Tablespace Name</th>   
+<th>Used (MB)</th>   
+<th>Free (MB)</th>      
+<th>Total (MB)</th>      
+<th>Free Percentage %</th> 
+</tr>
+'
+    ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                F.TABLESPACE_NAME TABLESPACE_NAME                      ,
+                TO_CHAR((T.TOTAL_SPACE - F.FREE_SPACE), '999,999') USED,
+                TO_CHAR(F.FREE_SPACE, '999,999') FREE                  ,
+                TO_CHAR(T.TOTAL_SPACE, '999,999') TOTAL                ,
+                TO_CHAR((ROUND((F.FREE_SPACE / T.TOTAL_SPACE) * 100)), '999') PER_FREE
+            FROM
+                (
+                    SELECT
+                            TABLESPACE_NAME,
+                            ROUND(SUM(BLOCKS *
+                            (
+                                SELECT VALUE / 1024 FROM V$PARAMETER WHERE NAME = 'db_block_size'
+                            )
+                            / 1024)) FREE_SPACE
+                        FROM
+                            DBA_FREE_SPACE
+                        GROUP BY
+                            TABLESPACE_NAME
+                )
+                F,
+                (
+                    SELECT
+                            TABLESPACE_NAME,
+                            ROUND(SUM(BYTES / 1048576)) TOTAL_SPACE
+                        FROM
+                            DBA_DATA_FILES
+                        GROUP BY
+                            TABLESPACE_NAME
+                )
+                T
+            WHERE
+                F.TABLESPACE_NAME = T.TABLESPACE_NAME
+    )
+    LOOP
+        IF i.PER_FREE < 15 THEN
+            res      := res||'<tr class="alterr">'|| CHR(13) || CHR(10) ;
+        ELSE
+            IF mod(cnt, 2) = 0 THEN
+                res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+            ELSE
+                res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+            END IF;
+        END IF;
+        res := res|| '<td>' || i.TABLESPACE_NAME || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.USED || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.FREE || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.TOTAL || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.PER_FREE || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="4">' || 'No Tablespaces found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END tablespaces;
+FUNCTION dbdatafiles(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '<table>    
+<caption>Table '|| tableNR ||
+    ': DB Data files</caption> 
+<tr>
+<th>File Name</th>
+<th>Tablespace Name</th>
+<th>Size (MB)</th>
+<th>Blocks</th>   
+<th>Status</th>   
+<th>Autoextensible</th>
+<th>Online Status</th>
+</tr>
+'
+    ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                file_name             ,
+                tablespace_name       ,
+                bytes / 1024 / 1024 mb,
+                blocks                ,
+                status                ,
+                autoextensible        ,
+                online_status
+            FROM
+                DBA_DATA_FILES
+    )
+    LOOP
+        IF mod(cnt, 2) = 0 THEN
+            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+        ELSE
+            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+        END IF;
+        res := res|| '<td>' || i.file_name || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.tablespace_name || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.mb || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.blocks || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.status || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.autoextensible || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.online_status || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="7">' || 'No data files found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END dbdatafiles;
+FUNCTION invalidObjects(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '<table>    
+<caption>Table '|| tableNR ||
+    ': Invalid Objects</caption> 
+<tr>   
+<th>Owner</th>   
+<th>Object Name</th>   
+<th>Object Type</th>      
+<th>Status</th>      
+</tr>
+'
+    ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                OWNER      ,
+                OBJECT_NAME,
+                OBJECT_TYPE,
+                STATUS
+            FROM
+                DBA_OBJECTS
+            WHERE
+                STATUS = 'INVALID'
+            ORDER BY
+                OWNER      ,
+                OBJECT_TYPE,
+                OBJECT_NAME
+    )
+    LOOP
+        IF mod(cnt, 2) = 0 THEN
+            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+        ELSE
+            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+        END IF;
+        res := res|| '<td>' || i.OWNER || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.OBJECT_NAME || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.OBJECT_TYPE || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.STATUS || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="4">' || 'No invalid objects found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END invalidObjects;
+FUNCTION deadlocks(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '<table>    
+<caption>Table '|| tableNR ||
+    ': DeadLocks</caption> 
+<tr>   
+<th>Sid</th>   
+<th>Blocker</th>   
+<th>Waiter</th>      
+</tr>
+' ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                SID                                  ,
+                DECODE(BLOCK, 0, 'NO', 'YES') BLOCKER,
+                DECODE(REQUEST, 0, 'NO', 'YES') WAITER
+            FROM
+                V$LOCK
+            WHERE
+                REQUEST > 0
+                OR
+                BLOCK > 0
+            ORDER BY
+                block DESC
+    )
+    LOOP
+        IF mod(cnt, 2) = 0 THEN
+            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+        ELSE
+            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+        END IF;
+        res := res|| '<td>' || i.SID || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.BLOCKER || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.WAITER || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="4">' || 'No deadlocks found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END deadlocks;
+FUNCTION unextendableObjects(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '<table>    
+<caption>Table '|| tableNR ||
+    ': Unextendable Objects</caption> 
+<tr>   
+<th>Owner</th>   
+<th>Segment Type</th>   
+<th>Segment Name</th>
+<th>Tablespace Name</th>
+<th>Request</th>
+<th>Max Free</th>
+</tr>
+'
+    ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                s.owner                        ,
+                s.segment_type                 ,
+                s.segment_name                 ,
+                s.tablespace_name              ,
+                s.next_extent / 1024 / 1024 req,
+                maxtspace.max / 1024 / 1024 maxfree
+            FROM
+                dba_segments s,
+                (
+                    SELECT
+                            tablespace_name,
+                            MAX(fsu.bytes) MAX
+                        FROM
+                            dba_free_space fsu
+                        GROUP BY
+                            tablespace_name
+                )
+                maxtspace
+            WHERE
+                s.tablespace_name = maxtspace.tablespace_name
+                AND
+                segment_type IN('TABLE', 'INDEX', 'CLUSTER', 'TABLE PARTITION', 'INDEX PARTITION')
+                AND
+                next_extent > maxtspace.max
+    )
+    LOOP
+        IF mod(cnt, 2) = 0 THEN
+            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+        ELSE
+            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+        END IF;
+        res := res|| '<td>' || i.owner || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.segment_type || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.segment_name || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.tablespace_name || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.req || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.maxfree || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="6">' || 'No unextendable objects found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END unextendableObjects;
+FUNCTION top10CPUusage(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '<table>    
+<caption>Table '|| tableNR ||
+    ': TOP 10 programs by cpu time</caption> 
+<tr>
+<th>Rank</th>
+<th>Sid</th>   
+<th>Program</th>   
+<th>CPU time (min)</th>
+</tr>
+'
+    ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                v.sid  ,
+                program,
+                TO_CHAR(v.value /(100 * 60), '999.999') CPUMins
+            FROM
+                v$statname s,
+                v$sesstat v ,
+                v$session sess
+            WHERE
+                s.name = 'CPU used by this session'
+                AND
+                sess.sid = v.sid
+                AND
+                v.statistic# = s.statistic#
+                AND
+                v.VALUE > 0
+                AND
+                rownum <= 10
+                AND
+                PROGRAM NOT LIKE '%ORACLE%'
+            ORDER BY
+                v.VALUE DESC
+    )
+    LOOP
+        IF mod(cnt, 2) = 0 THEN
+            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+        ELSE
+            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+        END IF;
+        res := res|| '<td>' || TO_CHAR(cnt + 1, '99') || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.sid || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.program || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.CPUMins || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="4">' || 'No programs found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END top10CPUusage;
+FUNCTION top10LongOperations(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '<table>    
+<caption>Table '|| tableNR ||
+    ': TOP 10 long operations</caption> 
+<tr>
+<th>Rank</th>
+<th>Sid</th>
+<th>User Name</th>   
+<th>Operation Name</th>   
+<th>Progress</th>
+<th>Total Work</th>
+<th>Units</th>
+<th>Start Time</th>
+<th>Job Duration</th>
+</tr>
+'
+    ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                sid                                                               ,
+                username                                                          ,
+                opname                                                            ,
+                DECODE(totalwork, 0, 0, NULL, 0, sofar * 100 / totalwork) progress,
+                totalwork                                                         ,
+                units                                                             ,
+                start_time                                                        ,
+                TO_CHAR(elapsed_seconds / 60, '999.999') AS job_dur_min
+            FROM
+                v$session_longops
+            WHERE
+                elapsed_seconds > 0
+                AND
+                rownum < 11
+            ORDER BY
+                elapsed_seconds DESC,
+                sid                 ,
+                start_time
+    )
+    LOOP
+        IF mod(cnt, 2) = 0 THEN
+            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+        ELSE
+            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+        END IF;
+        res := res|| '<td>' || TO_CHAR(cnt + 1, '99') || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.sid || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.username || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.opname || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.progress || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.totalwork || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.units || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.start_time || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.job_dur_min || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="9">' || 'No long operations found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END top10LongOperations;
+FUNCTION temporaryTablespaces(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '<table>    
+<caption>Table '|| tableNR ||
+    ': Temporary Tablespaces</caption> 
+<tr>
+<th>Sid serial</th>
+<th>User Name</th>
+<th>Tablespace</th>
+<th>Size</th>   
+<th>Program</th>   
+</tr>
+'
+    ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                b.tablespace                                                ,
+                ROUND(((b.blocks * p.value) / 1024 / 1024), 2) || 'M' "SIZE",
+                a.sid || ',' || a.serial# SID_SERIAL                        ,
+                a.username                                                  ,
+                a.program
+            FROM
+                sys.v_$session a   ,
+                sys.v_$sort_usage b,
+                sys.v_$parameter p
+            WHERE
+                p.name = 'db_block_size'
+                AND
+                a.saddr = b.session_addr
+            ORDER BY
+                b.tablespace,
+                b.blocks
+    )
+    LOOP
+        IF mod(cnt, 2) = 0 THEN
+            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+        ELSE
+            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+        END IF;
+        res := res|| '<td>' || i.SID_SERIAL || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.username || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.TABLESPACE || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i."SIZE" || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.program || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="5">' || 'No temporary tablesapaces found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END temporaryTablespaces;
+FUNCTION top10IdleSesions(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '<table>    
+<caption>Table '|| tableNR ||
+    ': TOP 10 IDLE Sesions</caption> 
+<tr>
+<th>Rank</th>
+<th>Sid</th>
+<th>Username</th>
+<th>Status</th>   
+<th>Logon Time</th>   
+<th>Program</th>
+<th>Idle</th>
+</tr>
+'
+    ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                sid                                                ,
+                username                                           ,
+                status                                             ,
+                TO_CHAR(logon_time, 'dd-mm-yy hh:mi:ss') logon_time,
+                floor(last_call_et / 3600) ||' hours ' || floor(mod(last_call_et, 3600) / 60) ||' mins ' || mod(mod(
+                last_call_et, 3600), 60) ||' secs' idle,
+                program
+            FROM
+                v$session
+            WHERE
+                TYPE = 'USER'
+                AND
+                rownum <= 10
+            ORDER BY
+                idle DESC
+    )
+    LOOP
+        IF mod(cnt, 2) = 0 THEN
+            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+        ELSE
+            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+        END IF;
+        res := res|| '<td>' || TO_CHAR(cnt + 1, '99') || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.sid || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.username || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.status || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.logon_time || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.program || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.idle || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="7">' || 'No idle sesions found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END top10IdleSesions;
+FUNCTION statisticsJobRun(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '<table>    
+<caption>Table '|| tableNR ||
+    ': Statistics job Status</caption> 
+<tr>
+<th>Job</th>
+<th>Broken</th>
+<th>Failures</th>
+<th>What</th>   
+<th>Last Date</th>
+<th>Last Sec</th>
+</tr>
+'
+    ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                job      ,
+                Broken   ,
+                failures ,
+                what     ,
+                last_date,
+                last_sec
+            FROM
+                dba_jobs
+            WHERE
+                what LIKE '%DBMS_STATS.GATHER_SCHEMA_STATS%'
+    )
+    LOOP
+        IF mod(cnt, 2) = 0 THEN
+            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+        ELSE
+            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+        END IF;
+        res := res|| '<td>' || i.job || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.Broken || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.failures || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.what || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.last_date || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.last_sec || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="6">' || 'No Statistics job found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END statisticsJobRun;
+FUNCTION backUpRman(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '<table>    
+<caption>Table '|| tableNR ||
+    ': RMAN BackUP job Status</caption> 
+<tr>
+<th>Session Key</th>
+<th>Input Type</th>
+<th>Status</th>
+<th>Start Time</th>   
+<th>End Time</th>
+<th>dur_min</th>
+</tr>
+'
+    ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                SESSION_KEY                                       ,
+                INPUT_TYPE                                        ,
+                STATUS                                            ,
+                TO_CHAR(START_TIME, 'mm/dd/yy hh24:mi') start_time,
+                TO_CHAR(END_TIME, 'mm/dd/yy hh24:mi') end_time    ,
+                TO_CHAR(elapsed_seconds / 60, '99.90') dur_min
+            FROM
+                V$RMAN_BACKUP_JOB_DETAILS
+            ORDER BY
+                session_key
+    )
+    LOOP
+        IF mod(cnt, 2) = 0 THEN
+            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+        ELSE
+            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+        END IF;
+        res := res|| '<td>' || i.SESSION_KEY || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.INPUT_TYPE || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.STATUS || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.start_time || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.end_time || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.dur_min || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="6">' || 'No rman backup  job found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END backUpRman;
+FUNCTION backUpRmanDetails(
+        tableNR NUMBER)
+    RETURN VARCHAR2
+AS
+    cnt INTEGER;
+    res VARCHAR2(4000) ;
+BEGIN
+    res := '<table>    
+<caption>Table '|| tableNR ||
+    ': RMAN BackUP job Status</caption> 
+<tr>
+<th>Date</th>
+<th>Backup Type</th>
+<th>Size</th>
+</tr>
+' ;
+    cnt := 0;
+    FOR i IN
+    (
+        SELECT
+                ctime "Date"                                                                   ,
+                DECODE(backup_type, 'L', 'Archive Log', 'D', 'Full', 'Incremental') backup_type,
+                bsize "Size MB"
+            FROM
+                (
+                    SELECT
+                            TRUNC(bp.completion_time) ctime,
+                            backup_type                    ,
+                            ROUND(SUM(bp.bytes / 1024 / 1024), 2) bsize
+                        FROM
+                            v$backup_set bs,
+                            v$backup_piece bp
+                        WHERE
+                            bs.set_stamp = bp.set_stamp
+                            AND
+                            bs.set_count = bp.set_count
+                            AND
+                            bp.status = 'A'
+                        GROUP BY
+                            TRUNC(bp.completion_time),
+                            backup_type
+                )
+            ORDER BY
+                1,
+                2
+    )
+    LOOP
+        IF mod(cnt, 2) = 0 THEN
+            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
+        ELSE
+            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
+        END IF;
+        res := res|| '<td>' || i."Date" || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i.backup_type || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '<td>' || i."Size MB" || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+        cnt := cnt + 1;
+    END LOOP;
+    IF cnt   = 0 THEN
+        res := res|| '<td colspan="3">' || 'No rman backup  job details found' || '</td>' || CHR(13) || CHR(10) ;
+        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    END IF;
+    res := res|| '</table>' || CHR(13) || CHR(10) ;
+    RETURN res;
+END backUpRmanDetails;
+
+PROCEDURE html_email(
+        p_to            IN VARCHAR2,
+        p_from          IN VARCHAR2,
+        p_subject       IN VARCHAR2,
+        p_text          IN VARCHAR2,
+        p_html          IN VARCHAR2,
+        p_smtp_hostname IN VARCHAR2,
+        p_smtp_portnum  IN VARCHAR2)
+IS
+    l_boundary VARCHAR2(255) DEFAULT 'a1b2c3d4e3f2g1';
+    l_connection utl_smtp.connection;
+    l_body_html CLOB := empty_clob; --This LOB will be the email message
+    l_offset  NUMBER;
+    l_ammount NUMBER;
+    l_temp    VARCHAR2(32767) DEFAULT NULL;
+BEGIN
+    l_connection := utl_smtp.open_connection(p_smtp_hostname, p_smtp_portnum) ;
+    utl_smtp.helo(l_connection, p_smtp_hostname) ;
+    utl_smtp.command(l_connection, 'AUTH LOGIN') ;
+    utl_smtp.command(l_connection, utl_raw.cast_to_varchar2(utl_encode.base64_encode(utl_raw.cast_to_raw(
+    'andrei.tataru@crisoft.ro')))) ;
+    utl_smtp.command(l_connection, utl_raw.cast_to_varchar2(utl_encode.base64_encode(utl_raw.cast_to_raw('S_5230_Star')
+    ))) ;
+    utl_smtp.mail(l_connection, p_from) ;
+    utl_smtp.rcpt(l_connection, p_to) ;
+    -------- to add to ,bcc, cc-------
+    ----------------------------------
+    l_temp := l_temp || 'MIME-Version: 1.0' || chr(13) || chr(10) ;
+    l_temp := l_temp || 'To: ' || p_to || chr(13) || chr(10) ;
+    l_temp := l_temp || 'From: ' || p_from || chr(13) || chr(10) ;
+    l_temp := l_temp || 'Subject: ' || p_subject || chr(13) || chr(10) ;
+    l_temp := l_temp || 'Reply-To: ' || p_from || chr(13) || chr(10) ;
+    l_temp := l_temp || 'Content-Type: multipart/alternative; boundary=' || chr(34) || l_boundary || chr(34) || chr(13)
+    || chr(10) ;
+    ----------------------------------------------------
+    -- Write the headers
+    dbms_lob.createtemporary(l_body_html, false, 10) ;
+    dbms_lob.write(l_body_html, LENGTH(l_temp), 1, l_temp) ;
+    ----------------------------------------------------
+    -- Write the text boundary
+    l_offset := dbms_lob.getlength(l_body_html) + 1;
+    l_temp   := '--' || l_boundary || chr(13) ||chr(10) ;
+    l_temp   := l_temp || 'content-type: text/plain; charset=us-ascii' || chr(13) || chr(10) || chr(13) || chr(10) ;
+    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    ----------------------------------------------------
+    -- Write the plain text portion of the email
+    l_offset := dbms_lob.getlength(l_body_html) + 1;
+    dbms_lob.write(l_body_html, LENGTH(p_text), l_offset, p_text) ;
+    ----------------------------------------------------
+    -- Write the HTML boundary
+    l_temp   := chr(13) ||chr(10) ||chr(13) ||chr(10) ||'--' || l_boundary || chr(13) || chr(10) ;
+    l_temp   := l_temp || 'content-type: text/html;' || chr(13) || chr(10) || chr(13) || chr(10) ;
+    l_offset := dbms_lob.getlength(l_body_html) + 1;
+    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    ----------------------------------------------------
+    -- Write the HTML portion of the message
+    l_offset := dbms_lob.getlength(l_body_html) + 1;
+    dbms_lob.write(l_body_html, LENGTH(p_html), l_offset, p_html) ;
+    ----------------------------------------------------
+    -- Write the final html boundary
+    l_temp   := chr(13) || chr(10) || '--' || l_boundary || '--' || chr(13) ;
+    l_offset := dbms_lob.getlength(l_body_html) + 1;
+    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    ----------------------------------------------------
+    -- Send the email in 1900 byte chunks to UTL_SMTP
+    l_offset  := 1;
+    l_ammount := 1900;
+    utl_smtp.open_data(l_connection) ;
+    WHILE l_offset < dbms_lob.getlength(l_body_html)
+    LOOP
+        utl_smtp.write_data(l_connection, dbms_lob.substr(l_body_html, l_ammount, l_offset)) ;
+        l_offset  := l_offset                                    + l_ammount ;
+        l_ammount := least(1900, dbms_lob.getlength(l_body_html) - l_ammount) ;
+    END LOOP;
+    utl_smtp.close_data(l_connection) ;
+    utl_smtp.quit(l_connection) ;
+    dbms_lob.freetemporary(l_body_html) ;
+END;
+FUNCTION createTableHTML(
+        t_id NUMBER)
+    RETURN VARCHAR2
+AS
+    c1 healt_checks%ROWTYPE;
+BEGIN
+    SELECT * INTO c1 FROM healt_checks WHERE "ID" = t_id;
+    RETURN NULL;
+END createTableHTML;
+
+
+ FUNCTION address_email( p_string IN VARCHAR2,
+                           p_recipients in array,l_connection utl_smtp.connection) return varchar2
+   is
+       l_recipients LONG;
+       
+       t_connection utl_smtp.connection;
+   BEGIN
+   
+    t_connection:=l_connection;
+      for i in 1 .. p_recipients.count
+      loop
+         utl_smtp.rcpt(t_connection, p_recipients(i) );
+         if ( l_recipients is null )
+         then
+             l_recipients := p_string || p_recipients(i) ;
+         else
+             l_recipients := l_recipients || ', ' || p_recipients(i);
+         end if;
+      end loop;
+      RETURN l_recipients;
+   end;
+
+
+  PROCEDURE html_email_v2(
+            p_to           in array default array(),
+            p_cc           in array default array(),
+            p_bcc          in array default array(),
+            p_from          IN VARCHAR2,
+            p_subject       IN VARCHAR2,
+            p_text          IN VARCHAR2,
+            p_html          IN VARCHAR2,
+            p_smtp_hostname IN VARCHAR2,
+            p_smtp_portnum  IN VARCHAR2)  AS
+            
+l_to_list   LONG;
+l_cc_list   LONG;
+l_bcc_list  long;        
+
+
+
+
+
+  
+    l_boundary VARCHAR2(255) DEFAULT 'a1b2c3d4e3f2g1';
+    l_connection utl_smtp.connection;
+    l_body_html CLOB := empty_clob; --This LOB will be the email message
+    l_offset  NUMBER;
+    l_ammount NUMBER;
+    l_temp    VARCHAR2(32767) DEFAULT NULL;
+BEGIN
+    l_connection := utl_smtp.open_connection(p_smtp_hostname, p_smtp_portnum) ;
+    utl_smtp.helo(l_connection, p_smtp_hostname) ;
+    utl_smtp.command(l_connection, 'AUTH LOGIN') ;
+    utl_smtp.command(l_connection, utl_raw.cast_to_varchar2(utl_encode.base64_encode(utl_raw.cast_to_raw(
+    'andrei.tataru@crisoft.ro')))) ;
+    utl_smtp.command(l_connection, utl_raw.cast_to_varchar2(utl_encode.base64_encode(utl_raw.cast_to_raw('S_5230_Star')
+    ))) ;
+    utl_smtp.mail(l_connection, p_from) ;
+    
+  
+    l_to_list  := address_email( 'To: ', p_to ,l_connection);
+    l_cc_list  := address_email( 'Cc: ', p_cc ,l_connection);
+    l_bcc_list := address_email( 'Bcc: ', p_bcc ,l_connection);
+    --utl_smtp.rcpt(l_connection, p_to) ;
+    
+    --utl_smtp.write_data( l_connection, l_to_list || chr(13) || chr(10) );
+    --utl_smtp.write_data( l_connection, l_cc_list || chr(13) || chr(10) );
+    --utl_smtp.write_data( l_connection, l_bcc_list || chr(13) || chr(10) );
+    -------- to add to ,bcc, cc-------
+    ----------------------------------
+    l_temp := l_temp || 'MIME-Version: 1.0' || chr(13) || chr(10) ;
+    --l_temp := l_temp || 'To: ' || p_to || chr(13) || chr(10) ;
+    l_temp := l_temp || l_to_list || chr(13) || chr(10) ;
+    l_temp := l_temp || l_cc_list || chr(13) || chr(10) ;
+    l_temp := l_temp || l_bcc_list || chr(13) || chr(10) ;
+    
+    l_temp := l_temp || 'From: ' || p_from || chr(13) || chr(10) ;
+    l_temp := l_temp || 'Subject: ' || p_subject || chr(13) || chr(10) ;
+    l_temp := l_temp || 'Reply-To: ' || p_from || chr(13) || chr(10) ;
+    l_temp := l_temp || 'Content-Type: multipart/alternative; boundary=' || chr(34) || l_boundary || chr(34) || chr(13)
+    || chr(10) ;
+    ----------------------------------------------------
+    -- Write the headers
+    dbms_lob.createtemporary(l_body_html, false, 10) ;
+    dbms_lob.write(l_body_html, LENGTH(l_temp), 1, l_temp) ;
+    ----------------------------------------------------
+    -- Write the text boundary
+    l_offset := dbms_lob.getlength(l_body_html) + 1;
+    l_temp   := '--' || l_boundary || chr(13) ||chr(10) ;
+    l_temp   := l_temp || 'content-type: text/plain; charset=us-ascii' || chr(13) || chr(10) || chr(13) || chr(10) ;
+    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    ----------------------------------------------------
+    -- Write the plain text portion of the email
+    l_offset := dbms_lob.getlength(l_body_html) + 1;
+    dbms_lob.write(l_body_html, LENGTH(p_text), l_offset, p_text) ;
+    ----------------------------------------------------
+    -- Write the HTML boundary
+    l_temp   := chr(13) ||chr(10) ||chr(13) ||chr(10) ||'--' || l_boundary || chr(13) || chr(10) ;
+    l_temp   := l_temp || 'content-type: text/html;' || chr(13) || chr(10) || chr(13) || chr(10) ;
+    l_offset := dbms_lob.getlength(l_body_html) + 1;
+    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    ----------------------------------------------------
+    -- Write the HTML portion of the message
+    l_offset := dbms_lob.getlength(l_body_html) + 1;
+    dbms_lob.write(l_body_html, LENGTH(p_html), l_offset, p_html) ;
+    ----------------------------------------------------
+    -- Write the final html boundary
+    l_temp   := chr(13) || chr(10) || '--' || l_boundary || '--' || chr(13) ;
+    l_offset := dbms_lob.getlength(l_body_html) + 1;
+    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    ----------------------------------------------------
+    -- Send the email in 1900 byte chunks to UTL_SMTP
+    l_offset  := 1;
+    l_ammount := 1900;
+    utl_smtp.open_data(l_connection) ;
+    WHILE l_offset < dbms_lob.getlength(l_body_html)
+    LOOP
+        utl_smtp.write_data(l_connection, dbms_lob.substr(l_body_html, l_ammount, l_offset)) ;
+        l_offset  := l_offset                                    + l_ammount ;
+        l_ammount := least(1900, dbms_lob.getlength(l_body_html) - l_ammount) ;
+    END LOOP;
+    utl_smtp.close_data(l_connection) ;
+    utl_smtp.quit(l_connection) ;
+    dbms_lob.freetemporary(l_body_html) ;
+  END html_email_v2;
+
+
+
+BEGIN
+    NULL;
+    --EXECUTE IMMEDIATE 'DROP TABLE IF EXISTS email_message';
+    --EXECUTE IMMEDIATE 'CREATE TABLE email_message (job_id NUMBER, recipient VARCHAR2(200), sender VARCHAR2(200),
+    -- message CLOB, sent varchar2(1))';
+    
+    --CREATE TABLE email_message (job_id NUMBER, to_recipients VARCHAR2(2000), cc_recipients VARCHAR2(2000), bcc_recipients VARCHAR2(2000), sender VARCHAR2(200),message CLOB, sent varchar2(1));
+    --CREATE TABLE HEALT_CHECKS (ID NUMBER, DESCR VARCHAR2(200), SQL VARCHAR2(4000));
+
+
+END CRISOFTADM;
+/
