@@ -1,15 +1,16 @@
 #-------------------------------------------------------------------------------
-# Name:        Excel Export Checker
+# Name: Excel Export Checker
 # Purpose:
 #
-# Author:      Tataru Andrei Emanuel
+# Author: Tataru Andrei Emanuel
 #
-# Created:     06-11-2013
-# Copyright:   (c) Tataru Andrei Emanuel 2013
-# Licence:     <your licence>
+# Created: 06-11-2013
+# Copyright: (c) Tataru Andrei Emanuel 2013
+# Licence: <your licence>
 #-------------------------------------------------------------------------------
 
 import os
+import sys
 import glob
 
 
@@ -33,8 +34,15 @@ class Record(object):
 
 def setDirectory(workingDir):
     curentDirectoryPath=os.getcwd()
-    logsDirectoryPath=curentDirectoryPath+"\\"+workingDir
-    os.chdir(logsDirectoryPath)
+    if os.name=="posix":
+       logsDirectoryPath=curentDirectoryPath+"/"+workingDir
+    else:
+        logsDirectoryPath=curentDirectoryPath+"\\"+workingDir
+    try:
+        os.chdir(logsDirectoryPath)
+    except OSError:
+        print "The specified folder does not exist --> "+logsDirectoryPath
+        sys.exit(1)
     return logsDirectoryPath
 
 def getLogsFiles():
@@ -53,13 +61,13 @@ def getExcelExportsLines(filename,excelExportsDict):
                 stopped=False
 
                 requestKey=line[line.index("[")+1:line.index("]")] #user + id
-                logLevel,date,time,logEntryType=line[:line.index("[")-2].replace("  "," ").split(" ")
+                logLevel,date,time,logEntryType=line[:line.index("[")-2].replace(" "," ").split(" ")
                 msgInfo=line[line.index("]")+2:]
 
 
-                if "Export excel for" in line[line.index("]")+1:].replace("  "," "):
+                if "Export excel for" in line[line.index("]")+1:].replace(" "," "):
                     started=True
-                if "Finished excel export" in line[line.index("]")+1:].replace("  "," "):
+                if "Finished excel export" in line[line.index("]")+1:].replace(" "," "):
                     stopped=True
 
                 if requestKey in excelExportsDict:
