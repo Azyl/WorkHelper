@@ -33,16 +33,17 @@ grant create table to CRISOFTADMIN;
 create table email (    createdate date,
             maildate date,
             maildata clob,
-            sent number(1)
+            sent number(1),
+            hostname varchar2(200)
             );
 
 
 
 ---------------------------------------------------------------------
-
 CREATE OR REPLACE PACKAGE Crisoftadmin.Crisoftadm AS
   TYPE ARRAY IS TABLE OF VARCHAR2(255);
-  PROCEDURE Health_Check(Path VARCHAR2, Filename VARCHAR2);
+  PROCEDURE Health_Check(Disk_Usage_Table VARCHAR2, Host_Name VARCHAR2);
+  PROCEDURE Disk_Usage(Disk_Usage_Table VARCHAR2, Host_Name VARCHAR2);
   FUNCTION Printstyle RETURN VARCHAR2;
   FUNCTION Resources(Tablenr NUMBER) RETURN VARCHAR2;
   FUNCTION Tablespaces(Tablenr NUMBER) RETURN VARCHAR2;
@@ -84,15 +85,15 @@ CREATE OR REPLACE PACKAGE Crisoftadmin.Crisoftadm AS
 
 END Crisoftadm;
 
-
-
+-----------------------------------------
 
 
 CREATE OR REPLACE PACKAGE BODY Crisoftadmin.Crisoftadm AS
-  PROCEDURE Health_Check(Path VARCHAR2, Filename VARCHAR2) AS
+
+  PROCEDURE Health_Check(Disk_Usage_Table VARCHAR2, Host_Name VARCHAR2) AS
     Resource_Limit VARCHAR2(2000);
     Cnt            INTEGER;
-    Html_Body      VARCHAR2(32000);
+    Html_Body      CLOB;
     Recipient      VARCHAR2(200);
     Frrom          VARCHAR2(200);
     Subject        VARCHAR2(4000);
@@ -126,29 +127,65 @@ CREATE OR REPLACE PACKAGE BODY Crisoftadmin.Crisoftadm AS
                  '<br><br><br>' || Top10longoperations(Tablenr => 8) || '<br><br><br>' ||
                  Temporarytablespaces(Tablenr => 9) || '<br><br><br>' || Top10idlesesions(Tablenr => 10) ||
                  '<br><br><br>' || Statisticsjobrun(Tablenr => 11) || '<br><br><br>' || Backuprman(Tablenr => 12) ||
-                 '<br><br><br>' || Backuprmandetails(Tablenr => 13) || '</body></html>';
-    Dbms_Output.Put_Line(Html_Body);
+                 '<br><br><br>' || Backuprmandetails(Tablenr => 13) || Disk_Usage_Table || '</body></html>';
+    --Dbms_Output.Put_Line(Html_Body);
   
-    --INSERT INTO email_message VALUES (maxEmailID,recipient,frrom,to_clob(html_body),'N');
-    --COMMIT;
-    --dbms_output.put_line('inserted into EMAIL_MESSAGE');
-    --html_email(p_to => recipient, p_from => frrom, p_subject => subject, p_text=> '-------', p_html => html_body,
-    --p_smtp_hostname=>smtphostName, p_smtp_portnum => smtpPortNumber) ;
+    INSERT INTO Email (Createdate, Maildata, Hostname) VALUES (SYSDATE, Html_Body, Host_Name);
+    COMMIT;
   
-    Html_Email_V2(p_To            => Crisoftadm.Array('andrei.tataru@mdlz.com', 'andrei.tataru@crisoft.ro'),
-                  p_Cc            => Crisoftadm.Array('andrei.tataru@mdlz.com'),
-                  p_Bcc           => Crisoftadm.Array('andrei.tataru@mdlz.com'),
-                  p_From          => Frrom,
-                  p_Subject       => Subject,
-                  p_Text          => '-------',
-                  p_Html          => Html_Body,
-                  p_Smtp_Hostname => Smtphostname,
-                  p_Smtp_Portnum  => Smtpportnumber);
+    /*    Html_Email_V2(p_To            => Crisoftadm.Array('andrei.tataru@mdlz.com', 'andrei.tataru@crisoft.ro'),
+    p_Cc            => Crisoftadm.Array('andrei.tataru@mdlz.com'),
+    p_Bcc           => Crisoftadm.Array('andrei.tataru@mdlz.com'),
+    p_From          => Frrom,
+    p_Subject       => Subject,
+    p_Text          => '-------',
+    p_Html          => Html_Body,
+    p_Smtp_Hostname => Smtphostname,
+    p_Smtp_Portnum  => Smtpportnumber);*/
   
-    --mail_pkg.array( 'tkyte@us.oracle.com','thomas.kyte@oracle.com' )
-  
-    --email_send('1');
   END Health_Check;
+
+  PROCEDURE Disk_Usage(Disk_Usage_Table VARCHAR2, Host_Name VARCHAR2) AS
+  
+    Html_Body      CLOB;
+    Recipient      VARCHAR2(200);
+    Frrom          VARCHAR2(200);
+    Subject        VARCHAR2(4000);
+    Smtphostname   VARCHAR2(200);
+    Smtpportnumber VARCHAR2(6);
+  BEGIN
+  
+    Smtphostname   := 'localhost';
+    Smtpportnumber := '465';
+    Recipient      := 'andrei.tataru@mdlz.com';
+    Frrom          := 'Crisoft_Admins@crisoft.ro';
+    --frrom := 'andrei.tataru@crisoft.ro';
+    Subject := 'Disk Usage Check on ' || Host_Name || ' at ' || To_Char(SYSDATE);
+    Dbms_Output.Put_Line(Subject);
+    Html_Body := '<!DOCTYPE html>
+<html>
+<head>
+';
+    Html_Body := Html_Body || Printstyle || '
+</head>
+
+<body>';
+    Html_Body := Html_Body || '<h1>' || Subject || '</h1>' || '<br><br><br>' || Disk_Usage_Table || '</body></html>';
+    --Dbms_Output.Put_Line(Html_Body);
+  
+    INSERT INTO Email (Createdate, Maildata, Hostname) VALUES (SYSDATE, Html_Body, Host_Name);
+    COMMIT;
+  
+    /*    Html_Email_V2(p_To            => Crisoftadm.Array('andrei.tataru@mdlz.com', 'andrei.tataru@crisoft.ro'),
+    p_Cc            => Crisoftadm.Array('andrei.tataru@mdlz.com'),
+    p_Bcc           => Crisoftadm.Array('andrei.tataru@mdlz.com'),
+    p_From          => Frrom,
+    p_Subject       => Subject,
+    p_Text          => '-------',
+    p_Html          => Html_Body,
+    p_Smtp_Hostname => Smtphostname,
+    p_Smtp_Portnum  => Smtpportnumber);*/
+  END Disk_Usage;
 
   FUNCTION Cssreset RETURN VARCHAR2 IS
   BEGIN
@@ -314,19 +351,13 @@ text-align:center;
 </tr>
 ';
     Cnt := 0;
-    FOR i IN (SELECT f.Tablespace_Name Tablespace_Name,
-                     To_Char((t.Total_Space - f.Free_Space), '999,999') Used,
-                     To_Char(f.Free_Space, '999,999') Free,
-                     To_Char(t.Total_Space, '999,999') Total,
-                     To_Char((Round((f.Free_Space / t.Total_Space) * 100)), '999') Per_Free
-                FROM (SELECT Tablespace_Name,
-                             Round(SUM(Blocks * (SELECT VALUE / 1024 FROM V$parameter WHERE NAME = 'db_block_size') / 1024)) Free_Space
-                        FROM Dba_Free_Space
-                       GROUP BY Tablespace_Name) f,
-                     (SELECT Tablespace_Name, Round(SUM(Bytes / 1048576)) Total_Space
-                        FROM Dba_Data_Files
-                       GROUP BY Tablespace_Name) t
-               WHERE f.Tablespace_Name = t.Tablespace_Name)
+    FOR i IN (SELECT a.Tablespace_Name,
+                     To_Char(SUM(a.Bytes) / 1024 / 1024, '999,999.99') Used,
+                     To_Char(SUM(a.Maxbytes - a.Bytes) / 1024 / 1024, '999,999.99') Free,
+                     To_Char(SUM(a.Maxbytes) / 1024 / 1024, '999,999.99') Total,
+                     To_Char(SUM(a.Maxbytes - a.Bytes) / SUM(a.Maxbytes) * 100, '999') Per_Free
+                FROM Dba_Data_Files a
+               GROUP BY a.Tablespace_Name)
     LOOP
       IF i.Per_Free < 15
       THEN
@@ -401,7 +432,7 @@ text-align:center;
   END Dbdatafiles;
   FUNCTION Invalidobjects(Tablenr NUMBER) RETURN VARCHAR2 AS
     Cnt INTEGER;
-    Res VARCHAR2(4000);
+    Res VARCHAR2(32000);
   BEGIN
     Res := '<table>
 <caption>Table ' || Tablenr || ': Invalid Objects</caption>
