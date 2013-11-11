@@ -1,1296 +1,1070 @@
-CREATE OR REPLACE PACKAGE CRISOFTADM
-AS
-    type array is table of varchar2(255);
-    PROCEDURE health_check(
-            path     VARCHAR2,
-            filename VARCHAR2) ;
-    FUNCTION printStyle
-        RETURN VARCHAR2;
-    FUNCTION resources(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION tablespaces(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION dbdatafiles(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION invalidObjects(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION deadlocks(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION unextendableObjects(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION top10CPUusage(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION top10LongOperations(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION top10IdleSesions(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION temporaryTablespaces(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION statisticsJobRun(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION backUpRman(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    FUNCTION backUpRmanDetails(
-            tableNR NUMBER)
-        RETURN VARCHAR2;
-    PROCEDURE html_email(
-        p_to            IN VARCHAR2,
-        p_from          IN VARCHAR2,
-            p_subject       IN VARCHAR2,
-            p_text          IN VARCHAR2,
-            p_html          IN VARCHAR2,
-            p_smtp_hostname IN VARCHAR2,
-            p_smtp_portnum  IN VARCHAR2) ;
-            
-        PROCEDURE html_email_v2(
-            p_to           in array default array(),
-            p_cc           in array default array(),
-            p_bcc          in array default array(),
-            p_from          IN VARCHAR2,
-            p_subject       IN VARCHAR2,
-            p_text          IN VARCHAR2,
-            p_html          IN VARCHAR2,
-            p_smtp_hostname IN VARCHAR2,
-            p_smtp_portnum  IN VARCHAR2) ;    
-            
-    FUNCTION cssReset
-        RETURN VARCHAR2;
-    PROCEDURE email_send(
-            p_job_id NUMBER) ;
-            
-FUNCTION createTableHTML (t_id NUMBER) RETURN VARCHAR2;
-
-  FUNCTION address_email( p_string IN VARCHAR2,
-                           p_recipients in array, l_connection utl_smtp.connection ) return varchar2;
-
-END CRISOFTADM;
-/
+-- Create the user 
+create user CRISOFTADMIN
+  default tablespace USERS
+  temporary tablespace TEMP
+  profile DEFAULT;
+-- Grant/Revoke object privileges 
+grant select on DBA_DATA_FILES to CRISOFTADMIN;
+grant select on DBA_FREE_SPACE to CRISOFTADMIN;
+grant select on DBA_JOBS to CRISOFTADMIN;
+grant select on DBA_OBJECTS to CRISOFTADMIN;
+grant select on DBA_SEGMENTS to CRISOFTADMIN;
+grant select on V_$BACKUP_PIECE to CRISOFTADMIN;
+grant select on V_$BACKUP_SET to CRISOFTADMIN;
+grant select on V_$INSTANCE to CRISOFTADMIN;
+grant select on V_$LOCK to CRISOFTADMIN;
+grant select on V_$PARAMETER to CRISOFTADMIN;
+grant select on V_$RESOURCE_LIMIT to CRISOFTADMIN;
+grant select on V_$RMAN_BACKUP_JOB_DETAILS to CRISOFTADMIN;
+grant select on V_$SESSION to CRISOFTADMIN;
+grant select on V_$SESSTAT to CRISOFTADMIN;
+grant select on V_$SORT_USAGE to CRISOFTADMIN;
+grant select on V_$STATNAME to CRISOFTADMIN;
+-- Grant/Revoke role privileges 
+grant connect to CRISOFTADMIN;
+-- Grant/Revoke system privileges 
+grant create procedure to CRISOFTADMIN;
 
 
-CREATE OR REPLACE PACKAGE BODY CRISOFTADM
-AS
-PROCEDURE health_check(
-        path     VARCHAR2,
-        filename VARCHAR2)
-AS
-    resource_limit VARCHAR2(2000) ;
-    cnt            INTEGER;
-    html_body      VARCHAR2(32000) ;
-    recipient      VARCHAR2(200) ;
-    frrom          VARCHAR2(200) ;
-    subject        VARCHAR2(4000) ;
-    maxEmailID     NUMBER;
-    instanceName   VARCHAR2(4000) ;
-    hostName       VARCHAR2(4000) ;
-    smtphostName   VARCHAR2(200) ;
-    smtpPortNumber VARCHAR2(6) ;
-BEGIN
-    SELECT instance_name, host_name INTO instanceName, hostName FROM v$instance;
-    SELECT
-            MAX(job_id) + 1
-        INTO
-            maxEmailID
-        FROM
-            email_message;
-    smtphostName   := 'localhost';
-    smtpPortNumber := '465';
-    recipient      := 'andrei.tataru@mdlz.com';
-    frrom          := 'Crisoft_Admins@crisoft.ro';
+
+
+CREATE OR REPLACE PACKAGE Crisoftadmin.Crisoftadm AS
+  TYPE ARRAY IS TABLE OF VARCHAR2(255);
+  PROCEDURE Health_Check(Path VARCHAR2, Filename VARCHAR2);
+  FUNCTION Printstyle RETURN VARCHAR2;
+  FUNCTION Resources(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Tablespaces(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Dbdatafiles(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Invalidobjects(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Deadlocks(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Unextendableobjects(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Top10cpuusage(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Top10longoperations(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Top10idlesesions(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Temporarytablespaces(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Statisticsjobrun(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Backuprman(Tablenr NUMBER) RETURN VARCHAR2;
+  FUNCTION Backuprmandetails(Tablenr NUMBER) RETURN VARCHAR2;
+  PROCEDURE Html_Email(p_To            IN VARCHAR2,
+                       p_From          IN VARCHAR2,
+                       p_Subject       IN VARCHAR2,
+                       p_Text          IN VARCHAR2,
+                       p_Html          IN VARCHAR2,
+                       p_Smtp_Hostname IN VARCHAR2,
+                       p_Smtp_Portnum  IN VARCHAR2);
+
+  PROCEDURE Html_Email_V2(p_To            IN ARRAY DEFAULT ARRAY(),
+                          p_Cc            IN ARRAY DEFAULT ARRAY(),
+                          p_Bcc           IN ARRAY DEFAULT ARRAY(),
+                          p_From          IN VARCHAR2,
+                          p_Subject       IN VARCHAR2,
+                          p_Text          IN VARCHAR2,
+                          p_Html          IN VARCHAR2,
+                          p_Smtp_Hostname IN VARCHAR2,
+                          p_Smtp_Portnum  IN VARCHAR2);
+
+  FUNCTION Cssreset RETURN VARCHAR2;
+  --PROCEDURE Email_Send(p_Job_Id NUMBER);
+
+  --FUNCTION createTableHTML (t_id NUMBER) RETURN VARCHAR2;
+
+  FUNCTION Address_Email(p_String IN VARCHAR2, p_Recipients IN ARRAY, l_Connection Utl_Smtp.Connection) RETURN VARCHAR2;
+
+END Crisoftadm;
+
+
+
+
+
+CREATE OR REPLACE PACKAGE BODY Crisoftadmin.Crisoftadm AS
+  PROCEDURE Health_Check(Path VARCHAR2, Filename VARCHAR2) AS
+    Resource_Limit VARCHAR2(2000);
+    Cnt            INTEGER;
+    Html_Body      VARCHAR2(32000);
+    Recipient      VARCHAR2(200);
+    Frrom          VARCHAR2(200);
+    Subject        VARCHAR2(4000);
+    Maxemailid     NUMBER;
+    Instancename   VARCHAR2(4000);
+    Hostname       VARCHAR2(4000);
+    Smtphostname   VARCHAR2(200);
+    Smtpportnumber VARCHAR2(6);
+  BEGIN
+    SELECT Instance_Name, Host_Name INTO Instancename, Hostname FROM V$instance;
+    --SELECT MAX(Job_Id) + 1 INTO Maxemailid FROM Email_Message;
+    Smtphostname   := 'localhost';
+    Smtpportnumber := '465';
+    Recipient      := 'andrei.tataru@mdlz.com';
+    Frrom          := 'Crisoft_Admins@crisoft.ro';
     --frrom := 'andrei.tataru@crisoft.ro';
-    subject := 'Health Check on '|| instanceName || ' ' || hostName || ' at ' || TO_CHAR(SYSDATE) ;
-    dbms_output.put_line(subject) ;
-    html_body := '<!DOCTYPE html>
-<html> 
-<head>  
+    Subject := 'Health Check on ' || Instancename || ' ' || Hostname || ' at ' || To_Char(SYSDATE);
+    Dbms_Output.Put_Line(Subject);
+    Html_Body := '<!DOCTYPE html>
+<html>
+<head>
 ';
-    html_body := html_body || printStyle ||' 
-</head> 
+    Html_Body := Html_Body || Printstyle || '
+</head>
 
 <body>';
-    html_body := html_body || '<h1>'|| subject || '</h1>' || '<br><br><br>' || resources(tableNR=>1) || '<br><br><br>'
-    || tablespaces(tableNR=>2) || '<br><br><br>' || dbdatafiles(tableNR=>3) || '<br><br><br>' || invalidObjects(tableNR
-    =>4) || '<br><br><br>' || deadlocks(tableNR=>5) || '<br><br><br>' || unextendableObjects(tableNR=>6) ||
-    '<br><br><br>' || top10CPUusage(tableNR=>7) || '<br><br><br>' || top10LongOperations(tableNR=>8) || '<br><br><br>'
-    || temporaryTablespaces(tableNR=>9) || '<br><br><br>' || top10IdleSesions(tableNR=>10) || '<br><br><br>' ||
-    statisticsJobRun(tableNR=>11) || '<br><br><br>' || backUpRman(tableNR=>12) || '<br><br><br>' || backUpRmanDetails(
-    tableNR=>13) ||'</body></html>';
-    dbms_output.put_line(html_body) ;
-    
+    Html_Body := Html_Body || '<h1>' || Subject || '</h1>' || '<br><br><br>' || Resources(Tablenr => 1) ||
+                 '<br><br><br>' || Tablespaces(Tablenr => 2) || '<br><br><br>' || Dbdatafiles(Tablenr => 3) ||
+                 '<br><br><br>' || Invalidobjects(Tablenr => 4) || '<br><br><br>' || Deadlocks(Tablenr => 5) ||
+                 '<br><br><br>' || Unextendableobjects(Tablenr => 6) || '<br><br><br>' || Top10cpuusage(Tablenr => 7) ||
+                 '<br><br><br>' || Top10longoperations(Tablenr => 8) || '<br><br><br>' ||
+                 Temporarytablespaces(Tablenr => 9) || '<br><br><br>' || Top10idlesesions(Tablenr => 10) ||
+                 '<br><br><br>' || Statisticsjobrun(Tablenr => 11) || '<br><br><br>' || Backuprman(Tablenr => 12) ||
+                 '<br><br><br>' || Backuprmandetails(Tablenr => 13) || '</body></html>';
+    Dbms_Output.Put_Line(Html_Body);
+  
     --INSERT INTO email_message VALUES (maxEmailID,recipient,frrom,to_clob(html_body),'N');
     --COMMIT;
     --dbms_output.put_line('inserted into EMAIL_MESSAGE');
     --html_email(p_to => recipient, p_from => frrom, p_subject => subject, p_text=> '-------', p_html => html_body,
     --p_smtp_hostname=>smtphostName, p_smtp_portnum => smtpPortNumber) ;
-    
-    html_email_v2(p_to => crisoftadm.array( 'andrei.tataru@mdlz.com','andrei.tataru@crisoft.ro' ),
-      p_cc => crisoftadm.array( 'andrei.tataru@mdlz.com' ),
-      p_bcc => crisoftadm.ARRAY( 'andrei.tataru@mdlz.com' ), 
-      p_from => frrom, p_subject => subject, p_text=> '-------', p_html => html_body,
-      p_smtp_hostname=>smtphostName, p_smtp_portnum => smtpPortNumber) ;
-    
-    
+  
+    Html_Email_V2(p_To            => Crisoftadm.Array('andrei.tataru@mdlz.com', 'andrei.tataru@crisoft.ro'),
+                  p_Cc            => Crisoftadm.Array('andrei.tataru@mdlz.com'),
+                  p_Bcc           => Crisoftadm.Array('andrei.tataru@mdlz.com'),
+                  p_From          => Frrom,
+                  p_Subject       => Subject,
+                  p_Text          => '-------',
+                  p_Html          => Html_Body,
+                  p_Smtp_Hostname => Smtphostname,
+                  p_Smtp_Portnum  => Smtpportnumber);
+  
     --mail_pkg.array( 'tkyte@us.oracle.com','thomas.kyte@oracle.com' )
-    
+  
     --email_send('1');
-END health_check;
-FUNCTION cssReset
-    RETURN VARCHAR2
-IS
-BEGIN
-    RETURN
-    'body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,form,fieldset,input,textarea,p,blockquote,th,td {  
-margin:0; 
+  END Health_Check;
+
+  FUNCTION Cssreset RETURN VARCHAR2 IS
+  BEGIN
+    RETURN 'body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,form,fieldset,input,textarea,p,blockquote,th,td {
+margin:0;
 padding:0;
 }
-html,body { 
-margin:0; 
+html,body {
+margin:0;
 padding:0;
 }
-table { 
-border-collapse:collapse; 
+table {
+border-collapse:collapse;
 border-spacing:0;
 }
-fieldset,img {  
+fieldset,img {
 border:0;
 }
-input{ 
-border:1px solid #b0b0b0; 
-padding:3px 5px 4px; 
-color:#979797; 
+input{
+border:1px solid #b0b0b0;
+padding:3px 5px 4px;
+color:#979797;
 width:190px;
 }
-address,caption,cite,code,dfn,th,var { 
-font-style:normal; 
+address,caption,cite,code,dfn,th,var {
+font-style:normal;
 font-weight:normal;
 }
-ol,ul { 
+ol,ul {
 list-style:none;
 }
-caption,th { 
+caption,th {
 text-align:left;
 }
-h1,h2,h3,h4,h5,h6 { 
-font-size:100%; 
+h1,h2,h3,h4,h5,h6 {
+font-size:100%;
 font-weight:normal;
 }
-q:before,q:after { 
+q:before,q:after {
 content:'''';
 }
 abbr,acronym { border:0;
-}'
-    ;
-END cssReset;
-FUNCTION printStyle
-    RETURN VARCHAR2
-AS
-BEGIN
-    RETURN '<style>   
-'||
+}';
+  END Cssreset;
+  FUNCTION Printstyle RETURN VARCHAR2 AS
+  BEGIN
+    RETURN '<style>
+' ||
     --cssReset ||
-    ' 
-table {    
-font-family:"Trebuchet MS", Arial, Helvetica, sans-serif;    
-width:100%;                
-heigth:100%;    
-border-collapse:collapse;   
-}   
+     '
+table {
+font-family:"Trebuchet MS", Arial, Helvetica, sans-serif;
+width:100%;
+heigth:100%;
+border-collapse:collapse;
+}
 
-td {    
+td {
 font-size:1em;
 text-align:center;
-border:1px solid #0041C2;    
-padding:3px 7px 2px 7px;   
-}   
+border:1px solid #0041C2;
+padding:3px 7px 2px 7px;
+}
 
-th {    
+th {
 font-size:1em;
 text-align:center;
-border:1px solid #0041C2;    
-padding:3px 7px 2px 7px;    
-font-size:1.1em;    
-padding-top:5px;    
-padding-bottom:4px;    
-background-color:#0041C2;    
-color:#ffffff;   
-}   
+border:1px solid #0041C2;
+padding:3px 7px 2px 7px;
+font-size:1.1em;
+padding-top:5px;
+padding-bottom:4px;
+background-color:#0041C2;
+color:#ffffff;
+}
 
 
-tr.alt td    
-{    
-color:#000000;    
-background-color:#659EC7;   
-}      
+tr.alt td
+{
+color:#000000;
+background-color:#659EC7;
+}
 
-tr.alterr td    
-{    
-color:#FFFFFF;    
-background-color:#F70D1A;   
-}    
+tr.alterr td
+{
+color:#FFFFFF;
+background-color:#F70D1A;
+}
 
 caption {
 color:#ffffff;
 border:1px solid #F70A1A;
 background-color:#7D0552;
-caption-side:top;   
+caption-side:top;
 }
 
 h1 {
 text-align:center;
 }
 
-</style> '
-    ;
-END printStyle;
-FUNCTION resources(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '        
-<table>    
-<caption>Table '|| tableNR ||
-    ': Resource usage</caption> 
-<tr>   
-<th>Resource name</th>   
-<th>Curent Utilization</th>   
-<th>Initial Allocation</th>      
-<th>Max Utilization</th>      
-<th>Limit value</th> 
+</style> ';
+  END Printstyle;
+  FUNCTION Resources(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '
+<table>
+<caption>Table ' || Tablenr || ': Resource usage</caption>
+<tr>
+<th>Resource name</th>
+<th>Curent Utilization</th>
+<th>Initial Allocation</th>
+<th>Max Utilization</th>
+<th>Limit value</th>
 </tr>
-'
-    ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                *
-            FROM
-                V$RESOURCE_LIMIT
-            WHERE
-                resource_name IN('processes', 'sessions', 'enqueue_locks', 'max_rollback_segments')
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT *
+                FROM V$resource_Limit
+               WHERE Resource_Name IN ('processes', 'sessions', 'enqueue_locks', 'max_rollback_segments'))
     LOOP
-        IF i.limit_value - i.current_utilization < 15 THEN
-            res                                 := res||'<tr class="alterr">'|| CHR(13) || CHR(10) ;
+      IF i.Limit_Value - i.Current_Utilization < 15
+      THEN
+        Res := Res || '<tr class="alterr">' || Chr(13) || Chr(10);
+      ELSE
+        IF MOD(Cnt, 2) = 0
+        THEN
+          Res := Res || '<tr>' || Chr(13) || Chr(10);
         ELSE
-            IF mod(cnt, 2) = 0 THEN
-                res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-            ELSE
-                res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-            END IF;
+          Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
         END IF;
-        res := res|| '<td>' || i.resource_name || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.current_utilization || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.initial_allocation || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.max_utilization || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.limit_value || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      END IF;
+      Res := Res || '<td>' || i.Resource_Name || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Current_Utilization || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Initial_Allocation || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Max_Utilization || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Limit_Value || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="4">' || 'No Resources found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="4">' || 'No Resources found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END resources;
-FUNCTION tablespaces(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '        
-<table>    
-<caption>Table '|| tableNR ||
-    ': Tablespace utilization</caption> 
-<tr>   
-<th>Tablespace Name</th>   
-<th>Used (MB)</th>   
-<th>Free (MB)</th>      
-<th>Total (MB)</th>      
-<th>Free Percentage %</th> 
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Resources;
+  FUNCTION Tablespaces(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '
+<table>
+<caption>Table ' || Tablenr || ': Tablespace utilization</caption>
+<tr>
+<th>Tablespace Name</th>
+<th>Used (MB)</th>
+<th>Free (MB)</th>
+<th>Total (MB)</th>
+<th>Free Percentage %</th>
 </tr>
-'
-    ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                F.TABLESPACE_NAME TABLESPACE_NAME                      ,
-                TO_CHAR((T.TOTAL_SPACE - F.FREE_SPACE), '999,999') USED,
-                TO_CHAR(F.FREE_SPACE, '999,999') FREE                  ,
-                TO_CHAR(T.TOTAL_SPACE, '999,999') TOTAL                ,
-                TO_CHAR((ROUND((F.FREE_SPACE / T.TOTAL_SPACE) * 100)), '999') PER_FREE
-            FROM
-                (
-                    SELECT
-                            TABLESPACE_NAME,
-                            ROUND(SUM(BLOCKS *
-                            (
-                                SELECT VALUE / 1024 FROM V$PARAMETER WHERE NAME = 'db_block_size'
-                            )
-                            / 1024)) FREE_SPACE
-                        FROM
-                            DBA_FREE_SPACE
-                        GROUP BY
-                            TABLESPACE_NAME
-                )
-                F,
-                (
-                    SELECT
-                            TABLESPACE_NAME,
-                            ROUND(SUM(BYTES / 1048576)) TOTAL_SPACE
-                        FROM
-                            DBA_DATA_FILES
-                        GROUP BY
-                            TABLESPACE_NAME
-                )
-                T
-            WHERE
-                F.TABLESPACE_NAME = T.TABLESPACE_NAME
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT f.Tablespace_Name Tablespace_Name,
+                     To_Char((t.Total_Space - f.Free_Space), '999,999') Used,
+                     To_Char(f.Free_Space, '999,999') Free,
+                     To_Char(t.Total_Space, '999,999') Total,
+                     To_Char((Round((f.Free_Space / t.Total_Space) * 100)), '999') Per_Free
+                FROM (SELECT Tablespace_Name,
+                             Round(SUM(Blocks * (SELECT VALUE / 1024 FROM V$parameter WHERE NAME = 'db_block_size') / 1024)) Free_Space
+                        FROM Dba_Free_Space
+                       GROUP BY Tablespace_Name) f,
+                     (SELECT Tablespace_Name, Round(SUM(Bytes / 1048576)) Total_Space
+                        FROM Dba_Data_Files
+                       GROUP BY Tablespace_Name) t
+               WHERE f.Tablespace_Name = t.Tablespace_Name)
     LOOP
-        IF i.PER_FREE < 15 THEN
-            res      := res||'<tr class="alterr">'|| CHR(13) || CHR(10) ;
+      IF i.Per_Free < 15
+      THEN
+        Res := Res || '<tr class="alterr">' || Chr(13) || Chr(10);
+      ELSE
+        IF MOD(Cnt, 2) = 0
+        THEN
+          Res := Res || '<tr>' || Chr(13) || Chr(10);
         ELSE
-            IF mod(cnt, 2) = 0 THEN
-                res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-            ELSE
-                res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-            END IF;
+          Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
         END IF;
-        res := res|| '<td>' || i.TABLESPACE_NAME || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.USED || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.FREE || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.TOTAL || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.PER_FREE || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      END IF;
+      Res := Res || '<td>' || i.Tablespace_Name || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Used || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Free || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Total || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Per_Free || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="4">' || 'No Tablespaces found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="4">' || 'No Tablespaces found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END tablespaces;
-FUNCTION dbdatafiles(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '<table>    
-<caption>Table '|| tableNR ||
-    ': DB Data files</caption> 
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Tablespaces;
+  FUNCTION Dbdatafiles(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '<table>
+<caption>Table ' || Tablenr || ': DB Data files</caption>
 <tr>
 <th>File Name</th>
 <th>Tablespace Name</th>
 <th>Size (MB)</th>
-<th>Blocks</th>   
-<th>Status</th>   
+<th>Blocks</th>
+<th>Status</th>
 <th>Autoextensible</th>
 <th>Online Status</th>
 </tr>
-'
-    ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                file_name             ,
-                tablespace_name       ,
-                bytes / 1024 / 1024 mb,
-                blocks                ,
-                status                ,
-                autoextensible        ,
-                online_status
-            FROM
-                DBA_DATA_FILES
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT File_Name, Tablespace_Name, Bytes / 1024 / 1024 Mb, Blocks, Status, Autoextensible, Online_Status
+                FROM Dba_Data_Files)
     LOOP
-        IF mod(cnt, 2) = 0 THEN
-            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-        ELSE
-            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-        END IF;
-        res := res|| '<td>' || i.file_name || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.tablespace_name || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.mb || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.blocks || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.status || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.autoextensible || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.online_status || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      IF MOD(Cnt, 2) = 0
+      THEN
+        Res := Res || '<tr>' || Chr(13) || Chr(10);
+      ELSE
+        Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
+      END IF;
+      Res := Res || '<td>' || i.File_Name || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Tablespace_Name || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Mb || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Blocks || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Status || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Autoextensible || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Online_Status || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="7">' || 'No data files found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="7">' || 'No data files found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END dbdatafiles;
-FUNCTION invalidObjects(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '<table>    
-<caption>Table '|| tableNR ||
-    ': Invalid Objects</caption> 
-<tr>   
-<th>Owner</th>   
-<th>Object Name</th>   
-<th>Object Type</th>      
-<th>Status</th>      
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Dbdatafiles;
+  FUNCTION Invalidobjects(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '<table>
+<caption>Table ' || Tablenr || ': Invalid Objects</caption>
+<tr>
+<th>Owner</th>
+<th>Object Name</th>
+<th>Object Type</th>
+<th>Status</th>
 </tr>
-'
-    ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                OWNER      ,
-                OBJECT_NAME,
-                OBJECT_TYPE,
-                STATUS
-            FROM
-                DBA_OBJECTS
-            WHERE
-                STATUS = 'INVALID'
-            ORDER BY
-                OWNER      ,
-                OBJECT_TYPE,
-                OBJECT_NAME
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT Owner, Object_Name, Object_Type, Status
+                FROM Dba_Objects
+               WHERE Status = 'INVALID'
+               ORDER BY Owner, Object_Type, Object_Name)
     LOOP
-        IF mod(cnt, 2) = 0 THEN
-            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-        ELSE
-            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-        END IF;
-        res := res|| '<td>' || i.OWNER || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.OBJECT_NAME || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.OBJECT_TYPE || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.STATUS || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      IF MOD(Cnt, 2) = 0
+      THEN
+        Res := Res || '<tr>' || Chr(13) || Chr(10);
+      ELSE
+        Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
+      END IF;
+      Res := Res || '<td>' || i.Owner || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Object_Name || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Object_Type || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Status || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="4">' || 'No invalid objects found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="4">' || 'No invalid objects found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END invalidObjects;
-FUNCTION deadlocks(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '<table>    
-<caption>Table '|| tableNR ||
-    ': DeadLocks</caption> 
-<tr>   
-<th>Sid</th>   
-<th>Blocker</th>   
-<th>Waiter</th>      
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Invalidobjects;
+  FUNCTION Deadlocks(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '<table>
+<caption>Table ' || Tablenr || ': DeadLocks</caption>
+<tr>
+<th>Sid</th>
+<th>Blocker</th>
+<th>Waiter</th>
 </tr>
-' ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                SID                                  ,
-                DECODE(BLOCK, 0, 'NO', 'YES') BLOCKER,
-                DECODE(REQUEST, 0, 'NO', 'YES') WAITER
-            FROM
-                V$LOCK
-            WHERE
-                REQUEST > 0
-                OR
-                BLOCK > 0
-            ORDER BY
-                block DESC
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT Sid, Decode(BLOCK, 0, 'NO', 'YES') Blocker, Decode(Request, 0, 'NO', 'YES') Waiter
+                FROM V$lock
+               WHERE Request > 0
+                  OR BLOCK > 0
+               ORDER BY BLOCK DESC)
     LOOP
-        IF mod(cnt, 2) = 0 THEN
-            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-        ELSE
-            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-        END IF;
-        res := res|| '<td>' || i.SID || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.BLOCKER || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.WAITER || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      IF MOD(Cnt, 2) = 0
+      THEN
+        Res := Res || '<tr>' || Chr(13) || Chr(10);
+      ELSE
+        Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
+      END IF;
+      Res := Res || '<td>' || i.Sid || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Blocker || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Waiter || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="4">' || 'No deadlocks found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="4">' || 'No deadlocks found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END deadlocks;
-FUNCTION unextendableObjects(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '<table>    
-<caption>Table '|| tableNR ||
-    ': Unextendable Objects</caption> 
-<tr>   
-<th>Owner</th>   
-<th>Segment Type</th>   
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Deadlocks;
+  FUNCTION Unextendableobjects(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '<table>
+<caption>Table ' || Tablenr || ': Unextendable Objects</caption>
+<tr>
+<th>Owner</th>
+<th>Segment Type</th>
 <th>Segment Name</th>
 <th>Tablespace Name</th>
 <th>Request</th>
 <th>Max Free</th>
 </tr>
-'
-    ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                s.owner                        ,
-                s.segment_type                 ,
-                s.segment_name                 ,
-                s.tablespace_name              ,
-                s.next_extent / 1024 / 1024 req,
-                maxtspace.max / 1024 / 1024 maxfree
-            FROM
-                dba_segments s,
-                (
-                    SELECT
-                            tablespace_name,
-                            MAX(fsu.bytes) MAX
-                        FROM
-                            dba_free_space fsu
-                        GROUP BY
-                            tablespace_name
-                )
-                maxtspace
-            WHERE
-                s.tablespace_name = maxtspace.tablespace_name
-                AND
-                segment_type IN('TABLE', 'INDEX', 'CLUSTER', 'TABLE PARTITION', 'INDEX PARTITION')
-                AND
-                next_extent > maxtspace.max
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT s.Owner,
+                     s.Segment_Type,
+                     s.Segment_Name,
+                     s.Tablespace_Name,
+                     s.Next_Extent / 1024 / 1024 Req,
+                     Maxtspace.Max / 1024 / 1024 Maxfree
+                FROM Dba_Segments s,
+                     (SELECT Tablespace_Name, MAX(Fsu.Bytes) MAX FROM Dba_Free_Space Fsu GROUP BY Tablespace_Name) Maxtspace
+               WHERE s.Tablespace_Name = Maxtspace.Tablespace_Name
+                 AND Segment_Type IN ('TABLE', 'INDEX', 'CLUSTER', 'TABLE PARTITION', 'INDEX PARTITION')
+                 AND Next_Extent > Maxtspace.Max)
     LOOP
-        IF mod(cnt, 2) = 0 THEN
-            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-        ELSE
-            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-        END IF;
-        res := res|| '<td>' || i.owner || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.segment_type || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.segment_name || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.tablespace_name || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.req || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.maxfree || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      IF MOD(Cnt, 2) = 0
+      THEN
+        Res := Res || '<tr>' || Chr(13) || Chr(10);
+      ELSE
+        Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
+      END IF;
+      Res := Res || '<td>' || i.Owner || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Segment_Type || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Segment_Name || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Tablespace_Name || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Req || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Maxfree || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="6">' || 'No unextendable objects found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="6">' || 'No unextendable objects found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END unextendableObjects;
-FUNCTION top10CPUusage(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '<table>    
-<caption>Table '|| tableNR ||
-    ': TOP 10 programs by cpu time</caption> 
-<tr>
-<th>Rank</th>
-<th>Sid</th>   
-<th>Program</th>   
-<th>CPU time (min)</th>
-</tr>
-'
-    ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                v.sid  ,
-                program,
-                TO_CHAR(v.value /(100 * 60), '999.999') CPUMins
-            FROM
-                v$statname s,
-                v$sesstat v ,
-                v$session sess
-            WHERE
-                s.name = 'CPU used by this session'
-                AND
-                sess.sid = v.sid
-                AND
-                v.statistic# = s.statistic#
-                AND
-                v.VALUE > 0
-                AND
-                rownum <= 10
-                AND
-                PROGRAM NOT LIKE '%ORACLE%'
-            ORDER BY
-                v.VALUE DESC
-    )
-    LOOP
-        IF mod(cnt, 2) = 0 THEN
-            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-        ELSE
-            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-        END IF;
-        res := res|| '<td>' || TO_CHAR(cnt + 1, '99') || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.sid || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.program || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.CPUMins || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
-    END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="4">' || 'No programs found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-    END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END top10CPUusage;
-FUNCTION top10LongOperations(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '<table>    
-<caption>Table '|| tableNR ||
-    ': TOP 10 long operations</caption> 
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Unextendableobjects;
+  FUNCTION Top10cpuusage(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '<table>
+<caption>Table ' || Tablenr || ': TOP 10 programs by cpu time</caption>
 <tr>
 <th>Rank</th>
 <th>Sid</th>
-<th>User Name</th>   
-<th>Operation Name</th>   
+<th>Program</th>
+<th>CPU time (min)</th>
+</tr>
+';
+    Cnt := 0;
+    FOR i IN (SELECT v.Sid, Program, To_Char(v.Value / (100 * 60), '999.999') Cpumins
+                FROM V$statname s, V$sesstat v, V$session Sess
+               WHERE s.Name = 'CPU used by this session'
+                 AND Sess.Sid = v.Sid
+                 AND v.Statistic# = s.Statistic#
+                 AND v.Value > 0
+                 AND Rownum <= 10
+                 AND Program NOT LIKE '%ORACLE%'
+               ORDER BY v.Value DESC)
+    LOOP
+      IF MOD(Cnt, 2) = 0
+      THEN
+        Res := Res || '<tr>' || Chr(13) || Chr(10);
+      ELSE
+        Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
+      END IF;
+      Res := Res || '<td>' || To_Char(Cnt + 1, '99') || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Sid || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Program || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Cpumins || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
+    END LOOP;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="4">' || 'No programs found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+    END IF;
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Top10cpuusage;
+  FUNCTION Top10longoperations(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '<table>
+<caption>Table ' || Tablenr || ': TOP 10 long operations</caption>
+<tr>
+<th>Rank</th>
+<th>Sid</th>
+<th>User Name</th>
+<th>Operation Name</th>
 <th>Progress</th>
 <th>Total Work</th>
 <th>Units</th>
 <th>Start Time</th>
 <th>Job Duration</th>
 </tr>
-'
-    ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                sid                                                               ,
-                username                                                          ,
-                opname                                                            ,
-                DECODE(totalwork, 0, 0, NULL, 0, sofar * 100 / totalwork) progress,
-                totalwork                                                         ,
-                units                                                             ,
-                start_time                                                        ,
-                TO_CHAR(elapsed_seconds / 60, '999.999') AS job_dur_min
-            FROM
-                v$session_longops
-            WHERE
-                elapsed_seconds > 0
-                AND
-                rownum < 11
-            ORDER BY
-                elapsed_seconds DESC,
-                sid                 ,
-                start_time
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT Sid,
+                     Username,
+                     Opname,
+                     Decode(Totalwork, 0, 0, NULL, 0, Sofar * 100 / Totalwork) Progress,
+                     Totalwork,
+                     Units,
+                     Start_Time,
+                     To_Char(Elapsed_Seconds / 60, '999.999') AS Job_Dur_Min
+                FROM V$session_Longops
+               WHERE Elapsed_Seconds > 0
+                 AND Rownum < 11
+               ORDER BY Elapsed_Seconds DESC, Sid, Start_Time)
     LOOP
-        IF mod(cnt, 2) = 0 THEN
-            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-        ELSE
-            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-        END IF;
-        res := res|| '<td>' || TO_CHAR(cnt + 1, '99') || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.sid || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.username || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.opname || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.progress || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.totalwork || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.units || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.start_time || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.job_dur_min || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      IF MOD(Cnt, 2) = 0
+      THEN
+        Res := Res || '<tr>' || Chr(13) || Chr(10);
+      ELSE
+        Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
+      END IF;
+      Res := Res || '<td>' || To_Char(Cnt + 1, '99') || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Sid || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Username || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Opname || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Progress || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Totalwork || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Units || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Start_Time || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Job_Dur_Min || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="9">' || 'No long operations found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="9">' || 'No long operations found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END top10LongOperations;
-FUNCTION temporaryTablespaces(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '<table>    
-<caption>Table '|| tableNR ||
-    ': Temporary Tablespaces</caption> 
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Top10longoperations;
+  FUNCTION Temporarytablespaces(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '<table>
+<caption>Table ' || Tablenr || ': Temporary Tablespaces</caption>
 <tr>
 <th>Sid serial</th>
 <th>User Name</th>
 <th>Tablespace</th>
-<th>Size</th>   
-<th>Program</th>   
+<th>Size</th>
+<th>Program</th>
 </tr>
-'
-    ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                b.tablespace                                                ,
-                ROUND(((b.blocks * p.value) / 1024 / 1024), 2) || 'M' "SIZE",
-                a.sid || ',' || a.serial# SID_SERIAL                        ,
-                a.username                                                  ,
-                a.program
-            FROM
-                sys.v_$session a   ,
-                sys.v_$sort_usage b,
-                sys.v_$parameter p
-            WHERE
-                p.name = 'db_block_size'
-                AND
-                a.saddr = b.session_addr
-            ORDER BY
-                b.tablespace,
-                b.blocks
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT b.Tablespace,
+                     Round(((b.Blocks * p.Value) / 1024 / 1024), 2) || 'M' "SIZE",
+                     a.Sid || ',' || a.Serial# Sid_Serial,
+                     a.Username,
+                     a.Program
+                FROM Sys.v_$session a, Sys.v_$sort_Usage b, Sys.v_$parameter p
+               WHERE p.Name = 'db_block_size'
+                 AND a.Saddr = b.Session_Addr
+               ORDER BY b.Tablespace, b.Blocks)
     LOOP
-        IF mod(cnt, 2) = 0 THEN
-            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-        ELSE
-            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-        END IF;
-        res := res|| '<td>' || i.SID_SERIAL || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.username || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.TABLESPACE || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i."SIZE" || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.program || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      IF MOD(Cnt, 2) = 0
+      THEN
+        Res := Res || '<tr>' || Chr(13) || Chr(10);
+      ELSE
+        Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
+      END IF;
+      Res := Res || '<td>' || i.Sid_Serial || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Username || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Tablespace || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i."SIZE" || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Program || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="5">' || 'No temporary tablesapaces found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="5">' || 'No temporary tablesapaces found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END temporaryTablespaces;
-FUNCTION top10IdleSesions(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '<table>    
-<caption>Table '|| tableNR ||
-    ': TOP 10 IDLE Sesions</caption> 
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Temporarytablespaces;
+  FUNCTION Top10idlesesions(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '<table>
+<caption>Table ' || Tablenr || ': TOP 10 IDLE Sesions</caption>
 <tr>
 <th>Rank</th>
 <th>Sid</th>
 <th>Username</th>
-<th>Status</th>   
-<th>Logon Time</th>   
+<th>Status</th>
+<th>Logon Time</th>
 <th>Program</th>
 <th>Idle</th>
 </tr>
-'
-    ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                sid                                                ,
-                username                                           ,
-                status                                             ,
-                TO_CHAR(logon_time, 'dd-mm-yy hh:mi:ss') logon_time,
-                floor(last_call_et / 3600) ||' hours ' || floor(mod(last_call_et, 3600) / 60) ||' mins ' || mod(mod(
-                last_call_et, 3600), 60) ||' secs' idle,
-                program
-            FROM
-                v$session
-            WHERE
-                TYPE = 'USER'
-                AND
-                rownum <= 10
-            ORDER BY
-                idle DESC
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT Sid,
+                     Username,
+                     Status,
+                     To_Char(Logon_Time, 'dd-mm-yy hh:mi:ss') Logon_Time,
+                     Floor(Last_Call_Et / 3600) || ' hours ' || Floor(MOD(Last_Call_Et, 3600) / 60) || ' mins ' ||
+                     MOD(MOD(Last_Call_Et, 3600), 60) || ' secs' Idle,
+                     Program
+                FROM V$session
+               WHERE TYPE = 'USER'
+                 AND Rownum <= 10
+               ORDER BY Idle DESC)
     LOOP
-        IF mod(cnt, 2) = 0 THEN
-            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-        ELSE
-            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-        END IF;
-        res := res|| '<td>' || TO_CHAR(cnt + 1, '99') || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.sid || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.username || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.status || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.logon_time || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.program || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.idle || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      IF MOD(Cnt, 2) = 0
+      THEN
+        Res := Res || '<tr>' || Chr(13) || Chr(10);
+      ELSE
+        Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
+      END IF;
+      Res := Res || '<td>' || To_Char(Cnt + 1, '99') || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Sid || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Username || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Status || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Logon_Time || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Program || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Idle || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="7">' || 'No idle sesions found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="7">' || 'No idle sesions found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END top10IdleSesions;
-FUNCTION statisticsJobRun(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '<table>    
-<caption>Table '|| tableNR ||
-    ': Statistics job Status</caption> 
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Top10idlesesions;
+  FUNCTION Statisticsjobrun(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '<table>
+<caption>Table ' || Tablenr || ': Statistics job Status</caption>
 <tr>
 <th>Job</th>
 <th>Broken</th>
 <th>Failures</th>
-<th>What</th>   
+<th>What</th>
 <th>Last Date</th>
 <th>Last Sec</th>
 </tr>
-'
-    ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                job      ,
-                Broken   ,
-                failures ,
-                what     ,
-                last_date,
-                last_sec
-            FROM
-                dba_jobs
-            WHERE
-                what LIKE '%DBMS_STATS.GATHER_SCHEMA_STATS%'
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT Job, Broken, Failures, What, Last_Date, Last_Sec
+                FROM Dba_Jobs
+               WHERE What LIKE '%DBMS_STATS.GATHER_SCHEMA_STATS%')
     LOOP
-        IF mod(cnt, 2) = 0 THEN
-            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-        ELSE
-            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-        END IF;
-        res := res|| '<td>' || i.job || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.Broken || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.failures || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.what || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.last_date || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.last_sec || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      IF MOD(Cnt, 2) = 0
+      THEN
+        Res := Res || '<tr>' || Chr(13) || Chr(10);
+      ELSE
+        Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
+      END IF;
+      Res := Res || '<td>' || i.Job || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Broken || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Failures || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.What || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Last_Date || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Last_Sec || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="6">' || 'No Statistics job found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="6">' || 'No Statistics job found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END statisticsJobRun;
-FUNCTION backUpRman(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '<table>    
-<caption>Table '|| tableNR ||
-    ': RMAN BackUP job Status</caption> 
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Statisticsjobrun;
+  FUNCTION Backuprman(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '<table>
+<caption>Table ' || Tablenr || ': RMAN BackUP job Status</caption>
 <tr>
 <th>Session Key</th>
 <th>Input Type</th>
 <th>Status</th>
-<th>Start Time</th>   
+<th>Start Time</th>
 <th>End Time</th>
 <th>dur_min</th>
 </tr>
-'
-    ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                SESSION_KEY                                       ,
-                INPUT_TYPE                                        ,
-                STATUS                                            ,
-                TO_CHAR(START_TIME, 'mm/dd/yy hh24:mi') start_time,
-                TO_CHAR(END_TIME, 'mm/dd/yy hh24:mi') end_time    ,
-                TO_CHAR(elapsed_seconds / 60, '99.90') dur_min
-            FROM
-                V$RMAN_BACKUP_JOB_DETAILS
-            ORDER BY
-                session_key
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT Session_Key,
+                     Input_Type,
+                     Status,
+                     To_Char(Start_Time, 'mm/dd/yy hh24:mi') Start_Time,
+                     To_Char(End_Time, 'mm/dd/yy hh24:mi') End_Time,
+                     To_Char(Elapsed_Seconds / 60, '99.90') Dur_Min
+                FROM V$rman_Backup_Job_Details
+               ORDER BY Session_Key)
     LOOP
-        IF mod(cnt, 2) = 0 THEN
-            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-        ELSE
-            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-        END IF;
-        res := res|| '<td>' || i.SESSION_KEY || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.INPUT_TYPE || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.STATUS || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.start_time || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.end_time || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.dur_min || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      IF MOD(Cnt, 2) = 0
+      THEN
+        Res := Res || '<tr>' || Chr(13) || Chr(10);
+      ELSE
+        Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
+      END IF;
+      Res := Res || '<td>' || i.Session_Key || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Input_Type || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Status || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Start_Time || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.End_Time || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Dur_Min || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="6">' || 'No rman backup  job found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="6">' || 'No rman backup  job found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END backUpRman;
-FUNCTION backUpRmanDetails(
-        tableNR NUMBER)
-    RETURN VARCHAR2
-AS
-    cnt INTEGER;
-    res VARCHAR2(4000) ;
-BEGIN
-    res := '<table>    
-<caption>Table '|| tableNR ||
-    ': RMAN BackUP job Status</caption> 
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Backuprman;
+  FUNCTION Backuprmandetails(Tablenr NUMBER) RETURN VARCHAR2 AS
+    Cnt INTEGER;
+    Res VARCHAR2(4000);
+  BEGIN
+    Res := '<table>
+<caption>Table ' || Tablenr || ': RMAN BackUP job Status</caption>
 <tr>
 <th>Date</th>
 <th>Backup Type</th>
 <th>Size</th>
 </tr>
-' ;
-    cnt := 0;
-    FOR i IN
-    (
-        SELECT
-                ctime "Date"                                                                   ,
-                DECODE(backup_type, 'L', 'Archive Log', 'D', 'Full', 'Incremental') backup_type,
-                bsize "Size MB"
-            FROM
-                (
-                    SELECT
-                            TRUNC(bp.completion_time) ctime,
-                            backup_type                    ,
-                            ROUND(SUM(bp.bytes / 1024 / 1024), 2) bsize
-                        FROM
-                            v$backup_set bs,
-                            v$backup_piece bp
-                        WHERE
-                            bs.set_stamp = bp.set_stamp
-                            AND
-                            bs.set_count = bp.set_count
-                            AND
-                            bp.status = 'A'
-                        GROUP BY
-                            TRUNC(bp.completion_time),
-                            backup_type
-                )
-            ORDER BY
-                1,
-                2
-    )
+';
+    Cnt := 0;
+    FOR i IN (SELECT Ctime "Date",
+                     Decode(Backup_Type, 'L', 'Archive Log', 'D', 'Full', 'Incremental') Backup_Type,
+                     Bsize "Size MB"
+                FROM (SELECT Trunc(Bp.Completion_Time) Ctime, Backup_Type, Round(SUM(Bp.Bytes / 1024 / 1024), 2) Bsize
+                        FROM V$backup_Set Bs, V$backup_Piece Bp
+                       WHERE Bs.Set_Stamp = Bp.Set_Stamp
+                         AND Bs.Set_Count = Bp.Set_Count
+                         AND Bp.Status = 'A'
+                       GROUP BY Trunc(Bp.Completion_Time), Backup_Type)
+               ORDER BY 1, 2)
     LOOP
-        IF mod(cnt, 2) = 0 THEN
-            res       := res||'<tr>'|| CHR(13) || CHR(10) ;
-        ELSE
-            res := res|| '<tr class="alt">' || CHR(13) || CHR(10) ;
-        END IF;
-        res := res|| '<td>' || i."Date" || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i.backup_type || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '<td>' || i."Size MB" || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
-        cnt := cnt + 1;
+      IF MOD(Cnt, 2) = 0
+      THEN
+        Res := Res || '<tr>' || Chr(13) || Chr(10);
+      ELSE
+        Res := Res || '<tr class="alt">' || Chr(13) || Chr(10);
+      END IF;
+      Res := Res || '<td>' || i."Date" || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i.Backup_Type || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '<td>' || i."Size MB" || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
+      Cnt := Cnt + 1;
     END LOOP;
-    IF cnt   = 0 THEN
-        res := res|| '<td colspan="3">' || 'No rman backup  job details found' || '</td>' || CHR(13) || CHR(10) ;
-        res := res|| '</tr>' || CHR(13) || CHR(10) ;
+    IF Cnt = 0
+    THEN
+      Res := Res || '<td colspan="3">' || 'No rman backup  job details found' || '</td>' || Chr(13) || Chr(10);
+      Res := Res || '</tr>' || Chr(13) || Chr(10);
     END IF;
-    res := res|| '</table>' || CHR(13) || CHR(10) ;
-    RETURN res;
-END backUpRmanDetails;
+    Res := Res || '</table>' || Chr(13) || Chr(10);
+    RETURN Res;
+  END Backuprmandetails;
 
-PROCEDURE html_email(
-        p_to            IN VARCHAR2,
-        p_from          IN VARCHAR2,
-        p_subject       IN VARCHAR2,
-        p_text          IN VARCHAR2,
-        p_html          IN VARCHAR2,
-        p_smtp_hostname IN VARCHAR2,
-        p_smtp_portnum  IN VARCHAR2)
-IS
-    l_boundary VARCHAR2(255) DEFAULT 'a1b2c3d4e3f2g1';
-    l_connection utl_smtp.connection;
-    l_body_html CLOB := empty_clob; --This LOB will be the email message
-    l_offset  NUMBER;
-    l_ammount NUMBER;
-    l_temp    VARCHAR2(32767) DEFAULT NULL;
-BEGIN
-    l_connection := utl_smtp.open_connection(p_smtp_hostname, p_smtp_portnum) ;
-    utl_smtp.helo(l_connection, p_smtp_hostname) ;
-    utl_smtp.command(l_connection, 'AUTH LOGIN') ;
-    utl_smtp.command(l_connection, utl_raw.cast_to_varchar2(utl_encode.base64_encode(utl_raw.cast_to_raw(
-    'andrei.tataru@crisoft.ro')))) ;
-    utl_smtp.command(l_connection, utl_raw.cast_to_varchar2(utl_encode.base64_encode(utl_raw.cast_to_raw('S_5230_Star')
-    ))) ;
-    utl_smtp.mail(l_connection, p_from) ;
-    utl_smtp.rcpt(l_connection, p_to) ;
+  PROCEDURE Html_Email(p_To            IN VARCHAR2,
+                       p_From          IN VARCHAR2,
+                       p_Subject       IN VARCHAR2,
+                       p_Text          IN VARCHAR2,
+                       p_Html          IN VARCHAR2,
+                       p_Smtp_Hostname IN VARCHAR2,
+                       p_Smtp_Portnum  IN VARCHAR2) IS
+    l_Boundary   VARCHAR2(255) DEFAULT 'a1b2c3d4e3f2g1';
+    l_Connection Utl_Smtp.Connection;
+    l_Body_Html  CLOB := Empty_Clob; --This LOB will be the email message
+    l_Offset     NUMBER;
+    l_Ammount    NUMBER;
+    l_Temp       VARCHAR2(32767) DEFAULT NULL;
+  BEGIN
+    l_Connection := Utl_Smtp.Open_Connection(p_Smtp_Hostname, p_Smtp_Portnum);
+    Utl_Smtp.Helo(l_Connection, p_Smtp_Hostname);
+    Utl_Smtp.Command(l_Connection, 'AUTH LOGIN');
+    Utl_Smtp.Command(l_Connection,
+                     Utl_Raw.Cast_To_Varchar2(Utl_Encode.Base64_Encode(Utl_Raw.Cast_To_Raw('andrei.tataru@crisoft.ro'))));
+    Utl_Smtp.Command(l_Connection,
+                     Utl_Raw.Cast_To_Varchar2(Utl_Encode.Base64_Encode(Utl_Raw.Cast_To_Raw('S_5230_Star'))));
+    Utl_Smtp.Mail(l_Connection, p_From);
+    Utl_Smtp.Rcpt(l_Connection, p_To);
     -------- to add to ,bcc, cc-------
     ----------------------------------
-    l_temp := l_temp || 'MIME-Version: 1.0' || chr(13) || chr(10) ;
-    l_temp := l_temp || 'To: ' || p_to || chr(13) || chr(10) ;
-    l_temp := l_temp || 'From: ' || p_from || chr(13) || chr(10) ;
-    l_temp := l_temp || 'Subject: ' || p_subject || chr(13) || chr(10) ;
-    l_temp := l_temp || 'Reply-To: ' || p_from || chr(13) || chr(10) ;
-    l_temp := l_temp || 'Content-Type: multipart/alternative; boundary=' || chr(34) || l_boundary || chr(34) || chr(13)
-    || chr(10) ;
+    l_Temp := l_Temp || 'MIME-Version: 1.0' || Chr(13) || Chr(10);
+    l_Temp := l_Temp || 'To: ' || p_To || Chr(13) || Chr(10);
+    l_Temp := l_Temp || 'From: ' || p_From || Chr(13) || Chr(10);
+    l_Temp := l_Temp || 'Subject: ' || p_Subject || Chr(13) || Chr(10);
+    l_Temp := l_Temp || 'Reply-To: ' || p_From || Chr(13) || Chr(10);
+    l_Temp := l_Temp || 'Content-Type: multipart/alternative; boundary=' || Chr(34) || l_Boundary || Chr(34) || Chr(13) ||
+              Chr(10);
     ----------------------------------------------------
     -- Write the headers
-    dbms_lob.createtemporary(l_body_html, false, 10) ;
-    dbms_lob.write(l_body_html, LENGTH(l_temp), 1, l_temp) ;
+    Dbms_Lob.Createtemporary(l_Body_Html, FALSE, 10);
+    Dbms_Lob.Write(l_Body_Html, Length(l_Temp), 1, l_Temp);
     ----------------------------------------------------
     -- Write the text boundary
-    l_offset := dbms_lob.getlength(l_body_html) + 1;
-    l_temp   := '--' || l_boundary || chr(13) ||chr(10) ;
-    l_temp   := l_temp || 'content-type: text/plain; charset=us-ascii' || chr(13) || chr(10) || chr(13) || chr(10) ;
-    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    l_Offset := Dbms_Lob.Getlength(l_Body_Html) + 1;
+    l_Temp   := '--' || l_Boundary || Chr(13) || Chr(10);
+    l_Temp   := l_Temp || 'content-type: text/plain; charset=us-ascii' || Chr(13) || Chr(10) || Chr(13) || Chr(10);
+    Dbms_Lob.Write(l_Body_Html, Length(l_Temp), l_Offset, l_Temp);
     ----------------------------------------------------
     -- Write the plain text portion of the email
-    l_offset := dbms_lob.getlength(l_body_html) + 1;
-    dbms_lob.write(l_body_html, LENGTH(p_text), l_offset, p_text) ;
+    l_Offset := Dbms_Lob.Getlength(l_Body_Html) + 1;
+    Dbms_Lob.Write(l_Body_Html, Length(p_Text), l_Offset, p_Text);
     ----------------------------------------------------
     -- Write the HTML boundary
-    l_temp   := chr(13) ||chr(10) ||chr(13) ||chr(10) ||'--' || l_boundary || chr(13) || chr(10) ;
-    l_temp   := l_temp || 'content-type: text/html;' || chr(13) || chr(10) || chr(13) || chr(10) ;
-    l_offset := dbms_lob.getlength(l_body_html) + 1;
-    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    l_Temp   := Chr(13) || Chr(10) || Chr(13) || Chr(10) || '--' || l_Boundary || Chr(13) || Chr(10);
+    l_Temp   := l_Temp || 'content-type: text/html;' || Chr(13) || Chr(10) || Chr(13) || Chr(10);
+    l_Offset := Dbms_Lob.Getlength(l_Body_Html) + 1;
+    Dbms_Lob.Write(l_Body_Html, Length(l_Temp), l_Offset, l_Temp);
     ----------------------------------------------------
     -- Write the HTML portion of the message
-    l_offset := dbms_lob.getlength(l_body_html) + 1;
-    dbms_lob.write(l_body_html, LENGTH(p_html), l_offset, p_html) ;
+    l_Offset := Dbms_Lob.Getlength(l_Body_Html) + 1;
+    Dbms_Lob.Write(l_Body_Html, Length(p_Html), l_Offset, p_Html);
     ----------------------------------------------------
     -- Write the final html boundary
-    l_temp   := chr(13) || chr(10) || '--' || l_boundary || '--' || chr(13) ;
-    l_offset := dbms_lob.getlength(l_body_html) + 1;
-    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    l_Temp   := Chr(13) || Chr(10) || '--' || l_Boundary || '--' || Chr(13);
+    l_Offset := Dbms_Lob.Getlength(l_Body_Html) + 1;
+    Dbms_Lob.Write(l_Body_Html, Length(l_Temp), l_Offset, l_Temp);
     ----------------------------------------------------
     -- Send the email in 1900 byte chunks to UTL_SMTP
-    l_offset  := 1;
-    l_ammount := 1900;
-    utl_smtp.open_data(l_connection) ;
-    WHILE l_offset < dbms_lob.getlength(l_body_html)
+    l_Offset  := 1;
+    l_Ammount := 1900;
+    Utl_Smtp.Open_Data(l_Connection);
+    WHILE l_Offset < Dbms_Lob.Getlength(l_Body_Html)
     LOOP
-        utl_smtp.write_data(l_connection, dbms_lob.substr(l_body_html, l_ammount, l_offset)) ;
-        l_offset  := l_offset                                    + l_ammount ;
-        l_ammount := least(1900, dbms_lob.getlength(l_body_html) - l_ammount) ;
+      Utl_Smtp.Write_Data(l_Connection, Dbms_Lob.Substr(l_Body_Html, l_Ammount, l_Offset));
+      l_Offset  := l_Offset + l_Ammount;
+      l_Ammount := Least(1900, Dbms_Lob.Getlength(l_Body_Html) - l_Ammount);
     END LOOP;
-    utl_smtp.close_data(l_connection) ;
-    utl_smtp.quit(l_connection) ;
-    dbms_lob.freetemporary(l_body_html) ;
-END;
-FUNCTION createTableHTML(
-        t_id NUMBER)
-    RETURN VARCHAR2
-AS
-    c1 healt_checks%ROWTYPE;
-BEGIN
-    SELECT * INTO c1 FROM healt_checks WHERE "ID" = t_id;
-    RETURN NULL;
-END createTableHTML;
+    Utl_Smtp.Close_Data(l_Connection);
+    Utl_Smtp.Quit(l_Connection);
+    Dbms_Lob.Freetemporary(l_Body_Html);
+  END;
+  /*FUNCTION createTableHTML(
+          t_id NUMBER)
+      RETURN VARCHAR2
+  AS
+      c1 healt_checks%ROWTYPE;
+  BEGIN
+      SELECT * INTO c1 FROM healt_checks WHERE "ID" = t_id;
+      RETURN NULL;
+  END createTableHTML;*/
 
-
- FUNCTION address_email( p_string IN VARCHAR2,
-                           p_recipients in array,l_connection utl_smtp.connection) return varchar2
-   is
-       l_recipients LONG;
-       
-       t_connection utl_smtp.connection;
-   BEGIN
-   
-    t_connection:=l_connection;
-      for i in 1 .. p_recipients.count
-      loop
-         utl_smtp.rcpt(t_connection, p_recipients(i) );
-         if ( l_recipients is null )
-         then
-             l_recipients := p_string || p_recipients(i) ;
-         else
-             l_recipients := l_recipients || ', ' || p_recipients(i);
-         end if;
-      end loop;
-      RETURN l_recipients;
-   end;
-
-
-  PROCEDURE html_email_v2(
-            p_to           in array default array(),
-            p_cc           in array default array(),
-            p_bcc          in array default array(),
-            p_from          IN VARCHAR2,
-            p_subject       IN VARCHAR2,
-            p_text          IN VARCHAR2,
-            p_html          IN VARCHAR2,
-            p_smtp_hostname IN VARCHAR2,
-            p_smtp_portnum  IN VARCHAR2)  AS
-            
-l_to_list   LONG;
-l_cc_list   LONG;
-l_bcc_list  long;        
-
-
-
-
-
+  FUNCTION Address_Email(p_String IN VARCHAR2, p_Recipients IN ARRAY, l_Connection Utl_Smtp.Connection) RETURN VARCHAR2 IS
+    l_Recipients LONG;
   
-    l_boundary VARCHAR2(255) DEFAULT 'a1b2c3d4e3f2g1';
-    l_connection utl_smtp.connection;
-    l_body_html CLOB := empty_clob; --This LOB will be the email message
-    l_offset  NUMBER;
-    l_ammount NUMBER;
-    l_temp    VARCHAR2(32767) DEFAULT NULL;
-BEGIN
-    l_connection := utl_smtp.open_connection(p_smtp_hostname, p_smtp_portnum) ;
-    utl_smtp.helo(l_connection, p_smtp_hostname) ;
-    utl_smtp.command(l_connection, 'AUTH LOGIN') ;
-    utl_smtp.command(l_connection, utl_raw.cast_to_varchar2(utl_encode.base64_encode(utl_raw.cast_to_raw(
-    'andrei.tataru@crisoft.ro')))) ;
-    utl_smtp.command(l_connection, utl_raw.cast_to_varchar2(utl_encode.base64_encode(utl_raw.cast_to_raw('S_5230_Star')
-    ))) ;
-    utl_smtp.mail(l_connection, p_from) ;
-    
+    t_Connection Utl_Smtp.Connection;
+  BEGIN
   
-    l_to_list  := address_email( 'To: ', p_to ,l_connection);
-    l_cc_list  := address_email( 'Cc: ', p_cc ,l_connection);
-    l_bcc_list := address_email( 'Bcc: ', p_bcc ,l_connection);
+    t_Connection := l_Connection;
+    FOR i IN 1 .. p_Recipients.Count
+    LOOP
+      Utl_Smtp.Rcpt(t_Connection, p_Recipients(i));
+      IF (l_Recipients IS NULL)
+      THEN
+        l_Recipients := p_String || p_Recipients(i);
+      ELSE
+        l_Recipients := l_Recipients || ', ' || p_Recipients(i);
+      END IF;
+    END LOOP;
+    RETURN l_Recipients;
+  END;
+
+  PROCEDURE Html_Email_V2(p_To            IN ARRAY DEFAULT ARRAY(),
+                          p_Cc            IN ARRAY DEFAULT ARRAY(),
+                          p_Bcc           IN ARRAY DEFAULT ARRAY(),
+                          p_From          IN VARCHAR2,
+                          p_Subject       IN VARCHAR2,
+                          p_Text          IN VARCHAR2,
+                          p_Html          IN VARCHAR2,
+                          p_Smtp_Hostname IN VARCHAR2,
+                          p_Smtp_Portnum  IN VARCHAR2) AS
+  
+    l_To_List  LONG;
+    l_Cc_List  LONG;
+    l_Bcc_List LONG;
+  
+    l_Boundary   VARCHAR2(255) DEFAULT 'a1b2c3d4e3f2g1';
+    l_Connection Utl_Smtp.Connection;
+    l_Body_Html  CLOB := Empty_Clob; --This LOB will be the email message
+    l_Offset     NUMBER;
+    l_Ammount    NUMBER;
+    l_Temp       VARCHAR2(32767) DEFAULT NULL;
+  BEGIN
+    l_Connection := Utl_Smtp.Open_Connection(p_Smtp_Hostname, p_Smtp_Portnum);
+    Utl_Smtp.Helo(l_Connection, p_Smtp_Hostname);
+    Utl_Smtp.Command(l_Connection, 'AUTH LOGIN');
+    Utl_Smtp.Command(l_Connection,
+                     Utl_Raw.Cast_To_Varchar2(Utl_Encode.Base64_Encode(Utl_Raw.Cast_To_Raw('andrei.tataru@crisoft.ro'))));
+    Utl_Smtp.Command(l_Connection,
+                     Utl_Raw.Cast_To_Varchar2(Utl_Encode.Base64_Encode(Utl_Raw.Cast_To_Raw('S_5230_Star'))));
+    Utl_Smtp.Mail(l_Connection, p_From);
+  
+    l_To_List  := Address_Email('To: ', p_To, l_Connection);
+    l_Cc_List  := Address_Email('Cc: ', p_Cc, l_Connection);
+    l_Bcc_List := Address_Email('Bcc: ', p_Bcc, l_Connection);
     --utl_smtp.rcpt(l_connection, p_to) ;
-    
+  
     --utl_smtp.write_data( l_connection, l_to_list || chr(13) || chr(10) );
     --utl_smtp.write_data( l_connection, l_cc_list || chr(13) || chr(10) );
     --utl_smtp.write_data( l_connection, l_bcc_list || chr(13) || chr(10) );
     -------- to add to ,bcc, cc-------
     ----------------------------------
-    l_temp := l_temp || 'MIME-Version: 1.0' || chr(13) || chr(10) ;
+    l_Temp := l_Temp || 'MIME-Version: 1.0' || Chr(13) || Chr(10);
     --l_temp := l_temp || 'To: ' || p_to || chr(13) || chr(10) ;
-    l_temp := l_temp || l_to_list || chr(13) || chr(10) ;
-    l_temp := l_temp || l_cc_list || chr(13) || chr(10) ;
-    l_temp := l_temp || l_bcc_list || chr(13) || chr(10) ;
-    
-    l_temp := l_temp || 'From: ' || p_from || chr(13) || chr(10) ;
-    l_temp := l_temp || 'Subject: ' || p_subject || chr(13) || chr(10) ;
-    l_temp := l_temp || 'Reply-To: ' || p_from || chr(13) || chr(10) ;
-    l_temp := l_temp || 'Content-Type: multipart/alternative; boundary=' || chr(34) || l_boundary || chr(34) || chr(13)
-    || chr(10) ;
+    l_Temp := l_Temp || l_To_List || Chr(13) || Chr(10);
+    l_Temp := l_Temp || l_Cc_List || Chr(13) || Chr(10);
+    l_Temp := l_Temp || l_Bcc_List || Chr(13) || Chr(10);
+  
+    l_Temp := l_Temp || 'From: ' || p_From || Chr(13) || Chr(10);
+    l_Temp := l_Temp || 'Subject: ' || p_Subject || Chr(13) || Chr(10);
+    l_Temp := l_Temp || 'Reply-To: ' || p_From || Chr(13) || Chr(10);
+    l_Temp := l_Temp || 'Content-Type: multipart/alternative; boundary=' || Chr(34) || l_Boundary || Chr(34) || Chr(13) ||
+              Chr(10);
     ----------------------------------------------------
     -- Write the headers
-    dbms_lob.createtemporary(l_body_html, false, 10) ;
-    dbms_lob.write(l_body_html, LENGTH(l_temp), 1, l_temp) ;
+    Dbms_Lob.Createtemporary(l_Body_Html, FALSE, 10);
+    Dbms_Lob.Write(l_Body_Html, Length(l_Temp), 1, l_Temp);
     ----------------------------------------------------
     -- Write the text boundary
-    l_offset := dbms_lob.getlength(l_body_html) + 1;
-    l_temp   := '--' || l_boundary || chr(13) ||chr(10) ;
-    l_temp   := l_temp || 'content-type: text/plain; charset=us-ascii' || chr(13) || chr(10) || chr(13) || chr(10) ;
-    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    l_Offset := Dbms_Lob.Getlength(l_Body_Html) + 1;
+    l_Temp   := '--' || l_Boundary || Chr(13) || Chr(10);
+    l_Temp   := l_Temp || 'content-type: text/plain; charset=us-ascii' || Chr(13) || Chr(10) || Chr(13) || Chr(10);
+    Dbms_Lob.Write(l_Body_Html, Length(l_Temp), l_Offset, l_Temp);
     ----------------------------------------------------
     -- Write the plain text portion of the email
-    l_offset := dbms_lob.getlength(l_body_html) + 1;
-    dbms_lob.write(l_body_html, LENGTH(p_text), l_offset, p_text) ;
+    l_Offset := Dbms_Lob.Getlength(l_Body_Html) + 1;
+    Dbms_Lob.Write(l_Body_Html, Length(p_Text), l_Offset, p_Text);
     ----------------------------------------------------
     -- Write the HTML boundary
-    l_temp   := chr(13) ||chr(10) ||chr(13) ||chr(10) ||'--' || l_boundary || chr(13) || chr(10) ;
-    l_temp   := l_temp || 'content-type: text/html;' || chr(13) || chr(10) || chr(13) || chr(10) ;
-    l_offset := dbms_lob.getlength(l_body_html) + 1;
-    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    l_Temp   := Chr(13) || Chr(10) || Chr(13) || Chr(10) || '--' || l_Boundary || Chr(13) || Chr(10);
+    l_Temp   := l_Temp || 'content-type: text/html;' || Chr(13) || Chr(10) || Chr(13) || Chr(10);
+    l_Offset := Dbms_Lob.Getlength(l_Body_Html) + 1;
+    Dbms_Lob.Write(l_Body_Html, Length(l_Temp), l_Offset, l_Temp);
     ----------------------------------------------------
     -- Write the HTML portion of the message
-    l_offset := dbms_lob.getlength(l_body_html) + 1;
-    dbms_lob.write(l_body_html, LENGTH(p_html), l_offset, p_html) ;
+    l_Offset := Dbms_Lob.Getlength(l_Body_Html) + 1;
+    Dbms_Lob.Write(l_Body_Html, Length(p_Html), l_Offset, p_Html);
     ----------------------------------------------------
     -- Write the final html boundary
-    l_temp   := chr(13) || chr(10) || '--' || l_boundary || '--' || chr(13) ;
-    l_offset := dbms_lob.getlength(l_body_html) + 1;
-    dbms_lob.write(l_body_html, LENGTH(l_temp), l_offset, l_temp) ;
+    l_Temp   := Chr(13) || Chr(10) || '--' || l_Boundary || '--' || Chr(13);
+    l_Offset := Dbms_Lob.Getlength(l_Body_Html) + 1;
+    Dbms_Lob.Write(l_Body_Html, Length(l_Temp), l_Offset, l_Temp);
     ----------------------------------------------------
     -- Send the email in 1900 byte chunks to UTL_SMTP
-    l_offset  := 1;
-    l_ammount := 1900;
-    utl_smtp.open_data(l_connection) ;
-    WHILE l_offset < dbms_lob.getlength(l_body_html)
+    l_Offset  := 1;
+    l_Ammount := 1900;
+    Utl_Smtp.Open_Data(l_Connection);
+    WHILE l_Offset < Dbms_Lob.Getlength(l_Body_Html)
     LOOP
-        utl_smtp.write_data(l_connection, dbms_lob.substr(l_body_html, l_ammount, l_offset)) ;
-        l_offset  := l_offset                                    + l_ammount ;
-        l_ammount := least(1900, dbms_lob.getlength(l_body_html) - l_ammount) ;
+      Utl_Smtp.Write_Data(l_Connection, Dbms_Lob.Substr(l_Body_Html, l_Ammount, l_Offset));
+      l_Offset  := l_Offset + l_Ammount;
+      l_Ammount := Least(1900, Dbms_Lob.Getlength(l_Body_Html) - l_Ammount);
     END LOOP;
-    utl_smtp.close_data(l_connection) ;
-    utl_smtp.quit(l_connection) ;
-    dbms_lob.freetemporary(l_body_html) ;
-  END html_email_v2;
-
-
+    Utl_Smtp.Close_Data(l_Connection);
+    Utl_Smtp.Quit(l_Connection);
+    Dbms_Lob.Freetemporary(l_Body_Html);
+  END Html_Email_V2;
 
 BEGIN
-    NULL;
-    --EXECUTE IMMEDIATE 'DROP TABLE IF EXISTS email_message';
-    --EXECUTE IMMEDIATE 'CREATE TABLE email_message (job_id NUMBER, recipient VARCHAR2(200), sender VARCHAR2(200),
-    -- message CLOB, sent varchar2(1))';
-    
-    --CREATE TABLE email_message (job_id NUMBER, to_recipients VARCHAR2(2000), cc_recipients VARCHAR2(2000), bcc_recipients VARCHAR2(2000), sender VARCHAR2(200),message CLOB, sent varchar2(1));
-    --CREATE TABLE HEALT_CHECKS (ID NUMBER, DESCR VARCHAR2(200), SQL VARCHAR2(4000));
+  NULL;
+  --EXECUTE IMMEDIATE 'DROP TABLE IF EXISTS email_message';
+--EXECUTE IMMEDIATE 'CREATE TABLE email_message (job_id NUMBER, recipient VARCHAR2(200), sender VARCHAR2(200),
+-- message CLOB, sent varchar2(1))';
 
+--CREATE TABLE email_message (job_id NUMBER, to_recipients VARCHAR2(2000), cc_recipients VARCHAR2(2000), bcc_recipients VARCHAR2(2000), sender VARCHAR2(200),message CLOB, sent varchar2(1));
+--CREATE TABLE HEALT_CHECKS (ID NUMBER, DESCR VARCHAR2(200), SQL VARCHAR2(4000));
 
-END CRISOFTADM;
-/
+END Crisoftadm;
