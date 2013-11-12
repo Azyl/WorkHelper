@@ -39,7 +39,9 @@ create table email (    createdate date,
             hostname varchar2(200)
             );
 
-
+CREATE DATABASE LINK LEMETTEST.CRISOFT.RO
+   CONNECT TO CURRENT_USER
+   USING 'lemettest';
 
 ---------------------------------------------------------------------
 CREATE OR REPLACE PACKAGE Crisoftadmin.Crisoftadm AS
