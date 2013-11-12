@@ -3,25 +3,25 @@ create user CRISOFTADMIN
 identified by "manu123"
   default tablespace USERS
   temporary tablespace TEMP
-  profile DEFAULT
-  quota unlimited on users;
+  password expire;
 -- Grant/Revoke object privileges 
-grant select on DBA_DATA_FILES to CRISOFTADMIN;
-grant select on DBA_FREE_SPACE to CRISOFTADMIN;
-grant select on DBA_JOBS to CRISOFTADMIN;
-grant select on DBA_OBJECTS to CRISOFTADMIN;
-grant select on DBA_SEGMENTS to CRISOFTADMIN;
-grant select on V_$BACKUP_PIECE to CRISOFTADMIN;
-grant select on V_$BACKUP_SET to CRISOFTADMIN;
-grant select on V_$INSTANCE to CRISOFTADMIN;
-grant select on V_$LOCK to CRISOFTADMIN;
-grant select on V_$PARAMETER to CRISOFTADMIN;
-grant select on V_$RESOURCE_LIMIT to CRISOFTADMIN;
-grant select on V_$RMAN_BACKUP_JOB_DETAILS to CRISOFTADMIN;
-grant select on V_$SESSION to CRISOFTADMIN;
-grant select on V_$SESSTAT to CRISOFTADMIN;
-grant select on V_$SORT_USAGE to CRISOFTADMIN;
-grant select on V_$STATNAME to CRISOFTADMIN;
+grant select on SYS.DBA_DATA_FILES to CRISOFTADMIN;
+grant select on SYS.DBA_FREE_SPACE to CRISOFTADMIN;
+grant select on SYS.DBA_JOBS to CRISOFTADMIN;
+grant select on SYS.DBA_OBJECTS to CRISOFTADMIN;
+grant select on SYS.DBA_SEGMENTS to CRISOFTADMIN;
+grant execute on SYS.UTL_SMTP to CRISOFTADMIN;
+grant select on SYS.V_$BACKUP_PIECE to CRISOFTADMIN;
+grant select on SYS.V_$BACKUP_SET to CRISOFTADMIN;
+grant select on SYS.V_$INSTANCE to CRISOFTADMIN;
+grant select on SYS.V_$LOCK to CRISOFTADMIN;
+grant select on SYS.V_$PARAMETER to CRISOFTADMIN;
+grant select on SYS.V_$RESOURCE_LIMIT to CRISOFTADMIN;
+grant select on SYS.V_$RMAN_BACKUP_JOB_DETAILS to CRISOFTADMIN;
+grant select on SYS.V_$SESSION to CRISOFTADMIN;
+grant select on SYS.V_$SESSTAT to CRISOFTADMIN;
+grant select on SYS.V_$SORT_USAGE to CRISOFTADMIN;
+grant select on SYS.V_$STATNAME to CRISOFTADMIN;
 -- Grant/Revoke role privileges 
 grant connect to CRISOFTADMIN;
 -- Grant/Revoke system privileges 
