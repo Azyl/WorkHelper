@@ -41,11 +41,15 @@ create table email (    createdate date,
 
 create database link LEMETTEST connect to CrisoftAdmin identified by manu123 using 'LEMETTEST.CRISOFT.RO';
 
----------------------------------------------------------------------
-CREATE OR REPLACE PACKAGE Crisoftadmin.Crisoftadm AS
+
+
+CREATE OR REPLACE PACKAGE Crisoftadm AS
   TYPE ARRAY IS TABLE OF VARCHAR2(255);
   PROCEDURE Health_Check(Disk_Usage_Table VARCHAR2, Host_Name VARCHAR2);
   PROCEDURE Disk_Usage(Disk_Usage_Table VARCHAR2, Host_Name VARCHAR2);
+
+  PROCEDURE Send_The_Mails(Dblink VARCHAR2);
+
   FUNCTION Printstyle RETURN VARCHAR2;
   FUNCTION Resources(Tablenr NUMBER) RETURN VARCHAR2;
   FUNCTION Tablespaces(Tablenr NUMBER) RETURN VARCHAR2;
@@ -88,8 +92,56 @@ CREATE OR REPLACE PACKAGE Crisoftadmin.Crisoftadm AS
 END Crisoftadm;
 
 
+CREATE OR REPLACE PACKAGE BODY Crisoftadm AS
 
-CREATE OR REPLACE PACKAGE BODY Crisoftadmin.Crisoftadm AS
+  PROCEDURE Send_The_Mails(Dblink VARCHAR2) AS
+  
+    Subject VARCHAR2(4000);
+  
+    Mail_Refcur     SYS_REFCURSOR;
+    Mail_Createdate DATE;
+    Mail_Maildata   CLOB;
+    Mail_Sent       NUMBER(1);
+    Mail_Hostname   VARCHAR2(200);
+  
+  BEGIN
+  
+    Subject := 'Health Check on ';
+  
+    EXECUTE IMMEDIATE 'insert into email select createdate,maildate,maildata,sent,hostname from CrisoftAdmin.email@' ||
+                      Dblink || ' WHERE Trunc(Createdate, ''DDD'') = Trunc(SYSDATE, ''DDD'') AND Sent = 0';
+  
+    OPEN Mail_Refcur FOR
+      SELECT Createdate, Maildata, Sent, Hostname
+        FROM Email
+       WHERE Trunc(Createdate, 'DDD') = Trunc(SYSDATE, 'DDD')
+         AND Sent = 0;
+    LOOP
+      FETCH Mail_Refcur
+        INTO Mail_Createdate, Mail_Maildata, Mail_Sent, Mail_Hostname;
+      EXIT WHEN Mail_Refcur%NOTFOUND;
+    
+      Html_Email_V2(p_To            => Crisoftadm.Array('andrei.tataru@mdlz.com', 'andrei.tataru@crisoft.ro'),
+                    p_Cc            => Crisoftadm.Array('andrei.tataru@mdlz.com'),
+                    p_Bcc           => Crisoftadm.Array('andrei.tataru@mdlz.com'),
+                    p_From          => 'Crisoft_Admins@crisoft.ro',
+                    p_Subject       => Subject || Mail_Hostname,
+                    p_Text          => '-------',
+                    p_Html          => Mail_Maildata,
+                    p_Smtp_Hostname => 'localhost',
+                    p_Smtp_Portnum  => '25');
+    
+      EXECUTE IMMEDIATE 'delete from email where createdate=:Mail_Createdate and hostname=:Mail_hostname'
+        USING Mail_Createdate, Mail_Hostname;
+      EXECUTE IMMEDIATE 'update email@' || Dblink ||
+                        ' set sent=1 where createdate=:Mail_Createdate and hostname=:Mail_hostname'
+        USING Mail_Createdate, Mail_Hostname;
+    
+    END LOOP;
+    COMMIT;
+    CLOSE Mail_Refcur;
+  
+  END Send_The_Mails;
 
   PROCEDURE Health_Check(Disk_Usage_Table VARCHAR2, Host_Name VARCHAR2) AS
     Resource_Limit VARCHAR2(2000);
