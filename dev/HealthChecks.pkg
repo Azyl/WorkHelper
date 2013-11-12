@@ -25,6 +25,7 @@ grant select on V_$STATNAME to CRISOFTADMIN;
 -- Grant/Revoke role privileges 
 grant connect to CRISOFTADMIN;
 -- Grant/Revoke system privileges 
+grant create database link to CRISOFTADMIN;
 grant create procedure to CRISOFTADMIN;
 grant create table to CRISOFTADMIN;
 
