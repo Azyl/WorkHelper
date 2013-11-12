@@ -1,5 +1,6 @@
 -- Create the user 
 create user CRISOFTADMIN
+identified by "manu123"
   default tablespace USERS
   temporary tablespace TEMP
   profile DEFAULT
@@ -85,7 +86,6 @@ CREATE OR REPLACE PACKAGE Crisoftadmin.Crisoftadm AS
 
 END Crisoftadm;
 
------------------------------------------
 
 
 CREATE OR REPLACE PACKAGE BODY Crisoftadmin.Crisoftadm AS
@@ -120,17 +120,27 @@ CREATE OR REPLACE PACKAGE BODY Crisoftadmin.Crisoftadm AS
 </head>
 
 <body>';
+    /* Html_Body := Html_Body || '<h1>' || Subject || '</h1>' || '<br><br><br>' || Resources(Tablenr => 1) ||
+    '<br><br><br>' || Tablespaces(Tablenr => 2) || '<br><br><br>' || Dbdatafiles(Tablenr => 3) ||
+    '<br><br><br>' || Invalidobjects(Tablenr => 4) || '<br><br><br>' || Deadlocks(Tablenr => 5) ||
+    '<br><br><br>' || Unextendableobjects(Tablenr => 6) || '<br><br><br>' || Top10cpuusage(Tablenr => 7) ||
+    '<br><br><br>' || Top10longoperations(Tablenr => 8) || '<br><br><br>' ||
+    Temporarytablespaces(Tablenr => 9) || '<br><br><br>' || Top10idlesesions(Tablenr => 10) ||
+    '<br><br><br>' || Statisticsjobrun(Tablenr => 11) || '<br><br><br>' || Backuprman(Tablenr => 12) ||
+    '<br><br><br>' || Backuprmandetails(Tablenr => 13) || Disk_Usage_Table || '</body></html>';*/
+  
     Html_Body := Html_Body || '<h1>' || Subject || '</h1>' || '<br><br><br>' || Resources(Tablenr => 1) ||
-                 '<br><br><br>' || Tablespaces(Tablenr => 2) || '<br><br><br>' || Dbdatafiles(Tablenr => 3) ||
-                 '<br><br><br>' || Invalidobjects(Tablenr => 4) || '<br><br><br>' || Deadlocks(Tablenr => 5) ||
-                 '<br><br><br>' || Unextendableobjects(Tablenr => 6) || '<br><br><br>' || Top10cpuusage(Tablenr => 7) ||
-                 '<br><br><br>' || Top10longoperations(Tablenr => 8) || '<br><br><br>' ||
-                 Temporarytablespaces(Tablenr => 9) || '<br><br><br>' || Top10idlesesions(Tablenr => 10) ||
-                 '<br><br><br>' || Statisticsjobrun(Tablenr => 11) || '<br><br><br>' || Backuprman(Tablenr => 12) ||
-                 '<br><br><br>' || Backuprmandetails(Tablenr => 13) || Disk_Usage_Table || '</body></html>';
+                 '<br><br><br>' || Top10cpuusage(Tablenr => 2) || '<br><br><br>' || Top10longoperations(Tablenr => 3) ||
+                 '<br><br><br>' || Top10idlesesions(Tablenr => 4) || '<br><br><br>' || Deadlocks(Tablenr => 5) ||
+                 '<br><br><br>' || Invalidobjects(Tablenr => 6) || '<br><br><br>' || Tablespaces(Tablenr => 7) ||
+                 '<br><br><br>' || Temporarytablespaces(Tablenr => 8) || '<br><br><br>' || Dbdatafiles(Tablenr => 9) ||
+                 '<br><br><br>' || Unextendableobjects(Tablenr => 10) || '<br><br><br>' ||
+                 Statisticsjobrun(Tablenr => 11) || '<br><br><br>' || Backuprman(Tablenr => 12) || '<br><br><br>' ||
+                 Backuprmandetails(Tablenr => 13) || Disk_Usage_Table || '</body></html>';
+  
     --Dbms_Output.Put_Line(Html_Body);
   
-    INSERT INTO Email (Createdate, Maildata, Hostname) VALUES (SYSDATE, Html_Body, Host_Name);
+    INSERT INTO Email (Createdate, Maildata, Hostname, Sent) VALUES (SYSDATE, Html_Body, Host_Name, 0);
     COMMIT;
   
     /*    Html_Email_V2(p_To            => Crisoftadm.Array('andrei.tataru@mdlz.com', 'andrei.tataru@crisoft.ro'),
@@ -173,7 +183,7 @@ CREATE OR REPLACE PACKAGE BODY Crisoftadmin.Crisoftadm AS
     Html_Body := Html_Body || '<h1>' || Subject || '</h1>' || '<br><br><br>' || Disk_Usage_Table || '</body></html>';
     --Dbms_Output.Put_Line(Html_Body);
   
-    INSERT INTO Email (Createdate, Maildata, Hostname) VALUES (SYSDATE, Html_Body, Host_Name);
+    INSERT INTO Email (Createdate, Maildata, Hostname, Sent) VALUES (SYSDATE, Html_Body, Host_Name, 0);
     COMMIT;
   
     /*    Html_Email_V2(p_To            => Crisoftadm.Array('andrei.tataru@mdlz.com', 'andrei.tataru@crisoft.ro'),
