@@ -39,6 +39,41 @@ create table email (    createdate date,
             hostname varchar2(200)
             );
 
+
+https://www.stunnel.org/downloads.html
+
+/*BEGIN
+DBMS_NETWORK_ACL_ADMIN.CREATE_ACL (
+acl => 'mail.crisoft.ro.xml',
+description => 'Send mail',
+principal => 'CRISOFTADMIN',
+is_grant => TRUE,
+privilege => 'connect',
+start_date => null,
+end_date => null);
+COMMIT;
+END;
+/
+
+begin
+dbms_network_acl_admin.assign_acl (
+acl => 'mail.crisoft.ro.xml',
+host => 'localhost',
+lower_port => 25,
+upper_port => 25);
+end;
+/
+
+COMMIT;*/
+
+--exec dbms_network_acl_admin.drop_acl(acl =>'mail.crisoft.ro.xml' );
+--commit;
+begin
+Crisoftadm.Send_The_Mails(Dblink => 'lemettest');
+end;
+/
+
+
 create database link LEMETTEST connect to CrisoftAdmin identified by manu123 using 'LEMETTEST.CRISOFT.RO';
 
 
