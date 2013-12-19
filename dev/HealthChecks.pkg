@@ -39,7 +39,7 @@ create table email (    createdate date,
             hostname varchar2(200)
             );
 
-
+http://www.robvanderwoude.com/vbstech_files_ini.php#ReadINI
 https://www.stunnel.org/downloads.html
 
 /*BEGIN
