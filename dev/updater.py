@@ -15,6 +15,7 @@ from optparse import OptionParser
 
 
 class updater():
+    
     def __init__(self):
         
         #logging:
@@ -68,6 +69,7 @@ class updater():
 
     def getFtp(self,meta): 
         ftp = ftplib.FTP(meta['host'], meta['username'], meta['password'])
+        ftp.sendcmd("TYPE i")    # Switch to Binary mode
         self.lgr.info('Changing remote dir (ftp) to: ' + meta['remotedir'])
         ftp.cwd(meta['remotedir'])
         return ftp        
@@ -75,6 +77,14 @@ class updater():
     def getMD5(self,file):
         hash = hashlib.md5(file.read()).hexdigest()
         return hash
+
+    def is_file(self,ftp,filename):
+        ftp.sendcmd("TYPE i")    # Switch to Binary mode
+        try:
+            ftp.size(filename) is not None
+            return True
+        except ftplib.error_perm:
+            return False 
 
     def checkDirectory(self,meta):
         ftp=self.getFtp(meta)
@@ -84,33 +94,51 @@ class updater():
         filelist=ftp.nlst()
         self.lgr.info('files in the remote folder: ')
         for file in filelist:
-            self.lgr.info('    '+file)
-            self.lgr.info('checking if the file exists in the localdirectory:')
-            try:
-                with open(meta['localdir']+'\\' +file) as f:
-                    localMD5 = self.getMD5(f)
-                    self.lgr.info('file '+file+' exists locally')
-                    self.lgr.info('    local file MD5:  '+localMD5)
-                    filetmp = open(meta['localdir']+'\\' + file + '.tmp', 'wb')
+            if self.is_file(ftp,file):
+                self.lgr.info('    '+file)
+                self.lgr.info('checking if the file exists in the localdirectory:')
+                try:
+                    with open(meta['localdir']+'\\' +file) as f:
+                        localMD5 = self.getMD5(f)
+                        self.lgr.info('file '+file+' exists locally')
+                        self.lgr.info('    local file MD5:  '+localMD5)
+                        filetmp = open(meta['localdir']+'\\' + file + '.tmp', 'wb')
+                        ftp.retrbinary('RETR '+meta['remotedir']+'/' + file, filetmp.write);
+                        filetmp.close()
+                        filex=open(meta['localdir']+'\\' + file + '.tmp', 'r')
+                        remoteMD5 = self.getMD5(filex)
+                        filex.close()
+                        self.lgr.info('    remote file MD5: '+remoteMD5)
+                        if localMD5==remoteMD5:
+                            self.lgr.info('file '+file+' is up to date')
+                            os.remove(meta['localdir']+'\\' + file + '.tmp')
+                        else:
+                            os.remove(meta['localdir']+'\\' + file)
+                            os.rename(meta['localdir']+'\\' + file + '.tmp', meta['localdir']+'\\' + file)
+                except IOError:
+                    self.lgr.info('file ' +file+' does not exist locally')
+                    filetmp = open(meta['localdir']+'\\' + file, 'wb')
                     ftp.retrbinary('RETR '+meta['remotedir']+'/' + file, filetmp.write);
                     filetmp.close()
-                    filex=open(meta['localdir']+'\\' + file + '.tmp', 'r')
-                    remoteMD5 = self.getMD5(filex)
-                    filex.close()
-                    self.lgr.info('    remote file MD5: '+remoteMD5)
-                    if localMD5==remoteMD5:
-                        self.lgr.info('file '+file+' is up to date')
-                        os.remove(meta['localdir']+'\\' + file + '.tmp')
-                    else:
-                        os.remove(meta['localdir']+'\\' + file)
-                        os.rename(meta['localdir']+'\\' + file + '.tmp', meta['localdir']+'\\' + file)
-            except IOError:
-                self.lgr.info('file ' +file+' does not exist locally')
-                filetmp = open(meta['localdir']+'\\' + file, 'wb')
-                ftp.retrbinary('RETR '+meta['remotedir']+'/' + file, filetmp.write);
-                filetmp.close()
-                self.lgr.info('file '+file+ ' downloaded')
-
+                    self.lgr.info('file '+file+ ' downloaded')
+            else:
+                self.lgr.info('Changing remote dir (ftp) to: ' + meta['remotedir']+ '/' + file)
+                ftp.cwd(meta['remotedir']+ '/' + file)
+                self.lgr.info('Checking if the local folder exists: ' + meta['localdir']+'\\' + file)
+                self.ensure_dir(meta['localdir']+'\\' + file)
+                meta1 = meta.copy()
+                meta1['remotedir']=meta['remotedir'] + '/' + file
+                meta1['localdir']=meta['localdir'] + '\\' + file
+                self.checkDirectory(meta1)
+                
+                
+                
+    def ensure_dir(self,folder):
+        #directory = os.path.dirname(folder)
+        self.lgr.debug('Path:  '+folder)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+            self.lgr.info('local directory does not exist, created : ' + folder)            
         
     def getFile(self,meta,filename,tmp):
         ftp=self.getFtp(meta)
@@ -132,7 +160,8 @@ def main(argv=None):
     
     for key in Refresher.meta:
         Refresher.lgr.info(" ++ " + key)
-        Refresher.checkDirectory(Refresher.meta[key])
+        if key <> 'main':
+            Refresher.checkDirectory(Refresher.meta[key])
 
 
 if __name__=="__main__": 
