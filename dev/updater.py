@@ -52,6 +52,18 @@ class updater():
         else:
             return {}
         conf = {}
+        
+        
+        #header = self.checkHeader(config)
+        #for i in header:
+            #print i
+        
+        s=s.splitlines(True)
+        s=s[6:]
+        
+        
+        s=''.join(s)
+        
         s = s.replace('\r\n', '\n')
         s = s.replace('\r', '\n')
         for item in s.split('\n\n'):
@@ -66,6 +78,31 @@ class updater():
         if name is not None:
             return conf[name]
         else: return conf
+
+    def checkVHeader(self,textFile):
+        for line in textFile:
+            if 'REM @(#)' in line:
+                yield line
+
+    def checkHeader(self,textFile):
+        header = self.checkVHeader(textFile)
+        revision=''
+        date=''
+        author=''
+        for line in list(header):
+            if '$Revision:' in line:
+                revision = line.replace('REM @(#)','').replace('$','').replace('Revision:','').replace('\n','').strip()
+                #self.lgr.debug(revision)
+            elif '$Date:' in line:
+                date = line.replace('REM @(#)','').replace('$','').replace('Date:','').replace('\n','').strip()
+                #self.lgr.debug(date)
+            elif '$Author:' in line:
+                author = line.replace('REM @(#)','').replace('$','').replace('Author:','').replace('\n','').strip()
+                #self.lgr.debug(author)
+        return {'revision':revision,'date':date,'author':author}
+                
+        
+        
 
     def getFtp(self, meta):
         ftp = ftplib.FTP(meta['host'], meta['username'], meta['password'])
@@ -99,22 +136,34 @@ class updater():
                 self.lgr.info('checking if the file exists in the localdirectory:')
                 try:
                     with open(meta['localdir'] + self.osPathDelim() + file) as f:
+                        last_pos = f.tell()
                         localMD5 = self.getMD5(f)
+                        f.seek(last_pos)
+                        localVheader = self.checkHeader(f)
                         self.lgr.info('file ' + file + ' exists locally')
                         self.lgr.info('    local file MD5:  ' + localMD5)
                         filetmp = open(meta['localdir'] + self.osPathDelim() + file + '.tmp', 'wb')
                         ftp.retrbinary('RETR ' + meta['remotedir'] + '/' + file, filetmp.write);
                         filetmp.close()
                         filex = open(meta['localdir'] + self.osPathDelim() + file + '.tmp', 'r')
+                        last_pos = filex.tell()
                         remoteMD5 = self.getMD5(filex)
+                        filex.seek(last_pos)
+                        remoteVheader = self.checkHeader(filex)
                         filex.close()
                         self.lgr.info('    remote file MD5: ' + remoteMD5)
+                        f.close()
                         if localMD5 == remoteMD5:
                             self.lgr.info('file ' + file + ' is up to date')
                             os.remove(meta['localdir'] + self.osPathDelim() + file + '.tmp')
                         else:
-                            os.remove(meta['localdir'] + self.osPathDelim() + file)
-                            os.rename(meta['localdir'] + self.osPathDelim() + file + '.tmp', meta['localdir'] + '\\' + file)
+                            self.lgr.info('!! files do not match -- checking the version number from the header of the file')
+                            self.lgr.debug('localfile vheader ' + ''.join(localVheader['revision']))
+                            self.lgr.debug('remotefile vheader ' + ''.join(remoteVheader['revision']))
+                            
+                            if (isinstance( remoteVheader['revision'], (int,long)) and not (isinstance( localVheader['revision'], (int,long))) ) or (isinstance( remoteVheader['revision'], (int,long)) and isinstance( localVheader['revision'], (int,long)) and localVheader['revision']< remoteVheader['revision']) :
+                                os.remove(meta['localdir'] + self.osPathDelim() + file)
+                                os.rename(meta['localdir'] + self.osPathDelim() + file + '.tmp', meta['localdir'] + '\\' + file)
                 except IOError:
                     self.lgr.info('file ' + file + ' does not exist locally')
                     filetmp = open(meta['localdir'] + self.osPathDelim() + file, 'wb')
