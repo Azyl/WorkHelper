@@ -52,18 +52,18 @@ class updater():
         else:
             return {}
         conf = {}
-        
-        
-        #header = self.checkHeader(config)
-        #for i in header:
-            #print i
-        
-        s=s.splitlines(True)
-        s=s[6:]
-        
-        
-        s=''.join(s)
-        
+
+
+        # header = self.checkHeader(config)
+        # for i in header:
+            # print i
+
+        s = s.splitlines(True)
+        s = s[6:]
+
+
+        s = ''.join(s)
+
         s = s.replace('\r\n', '\n')
         s = s.replace('\r', '\n')
         for item in s.split('\n\n'):
@@ -79,30 +79,30 @@ class updater():
             return conf[name]
         else: return conf
 
-    def checkVHeader(self,textFile):
+    def checkVHeader(self, textFile):
         for line in textFile:
             if 'REM @(#)' in line:
                 yield line
 
-    def checkHeader(self,textFile):
+    def checkHeader(self, textFile):
         header = self.checkVHeader(textFile)
-        revision=''
-        date=''
-        author=''
+        revision = ''
+        date = ''
+        author = ''
         for line in list(header):
             if '$Revision:' in line:
-                revision = line.replace('REM @(#)','').replace('$','').replace('Revision:','').replace('\n','').strip()
-                #self.lgr.debug(revision)
+                revision = line.replace('REM @(#)', '').replace('$', '').replace('Revision:', '').replace('\n', '').replace('  ', '').replace(' ', '').strip()
+                # self.lgr.debug(revision)
             elif '$Date:' in line:
-                date = line.replace('REM @(#)','').replace('$','').replace('Date:','').replace('\n','').strip()
-                #self.lgr.debug(date)
+                date = line.replace('REM @(#)', '').replace('$', '').replace('Date:', '').replace('\n', '').replace('  ', '').replace(' ', '').strip()
+                # self.lgr.debug(date)
             elif '$Author:' in line:
-                author = line.replace('REM @(#)','').replace('$','').replace('Author:','').replace('\n','').strip()
-                #self.lgr.debug(author)
-        return {'revision':revision,'date':date,'author':author}
-                
-        
-        
+                author = line.replace('REM @(#)', '').replace('$', '').replace('Author:', '').replace('\n', '').replace('  ', '').replace(' ', '').strip()
+                # self.lgr.debug(author)
+        return {'revision':revision, 'date':date, 'author':author}
+
+
+
 
     def getFtp(self, meta):
         ftp = ftplib.FTP(meta['host'], meta['username'], meta['password'])
@@ -160,10 +160,37 @@ class updater():
                             self.lgr.info('!! files do not match -- checking the version number from the header of the file')
                             self.lgr.debug('localfile vheader ' + ''.join(localVheader['revision']))
                             self.lgr.debug('remotefile vheader ' + ''.join(remoteVheader['revision']))
-                            
-                            if (isinstance( remoteVheader['revision'], (int,long)) and not (isinstance( localVheader['revision'], (int,long))) ) or (isinstance( remoteVheader['revision'], (int,long)) and isinstance( localVheader['revision'], (int,long)) and localVheader['revision']< remoteVheader['revision']) :
+
+                            doUpdate = False
+                            rValid = False
+                            lVaild = False
+
+                            try:
+                                int(remoteVheader['revision'])
+                                rValid = True
+                            except ValueError:
+                                self.lgr.debug('remoteVheader is not a valid number or is missing ' + remoteVheader['revision'])
+
+                            try:
+                                int(localVheader['revision'])
+                                rValid = True
+                            except ValueError:
+                                self.lgr.debug('localVheader is not a valid number or is missing ' + localVheader['revision'])
+
+                            if rValid and lVaild:
+                                if int(remoteVheader['revision']) > int(localVheader['revision']):
+                                    doUpdate = True
+                            elif rValid and not lVaild:
+                                doUpdate = True
+                            else:
+                                self.lgr.debug('remote file version cannot be determined not updating the local file')
+
+
+                            if doUpdate == True:
                                 os.remove(meta['localdir'] + self.osPathDelim() + file)
                                 os.rename(meta['localdir'] + self.osPathDelim() + file + '.tmp', meta['localdir'] + '\\' + file)
+                                self.lgr.debug('local file updated')
+
                 except IOError:
                     self.lgr.info('file ' + file + ' does not exist locally')
                     filetmp = open(meta['localdir'] + self.osPathDelim() + file, 'wb')
@@ -199,6 +226,7 @@ class updater():
         print 'Opening local file '
         ftp.retrbinary('RETR ' + meta['remotedir'] + '/' + filename, file.write);
         print 'Closing file ' + filename
+        # file.close()
         ftp.quit()
 
 def main(argv = None):
