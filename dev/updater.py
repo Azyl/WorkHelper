@@ -30,6 +30,7 @@ class updater():
 
         # config:
         self.meta = self.getConfig()
+        self.recursive = self.meta['main']['recursiveUpdate']
 
     def getConfig(self, name = None):
 
@@ -105,6 +106,7 @@ class updater():
 
 
     def getFtp(self, meta):
+        
         ftp = ftplib.FTP(meta['host'], meta['username'], meta['password'])
         ftp.sendcmd("TYPE i")  # Switch to Binary mode
         self.lgr.info('Changing remote dir (ftp) to: ' + meta['remotedir'])
@@ -198,14 +200,15 @@ class updater():
                     filetmp.close()
                     self.lgr.info('file ' + file + ' downloaded')
             else:
-                self.lgr.info('Changing remote dir (ftp) to: ' + meta['remotedir'] + '/' + file)
-                ftp.cwd(meta['remotedir'] + '/' + file)
-                self.lgr.info('Checking if the local folder exists: ' + meta['localdir'] + self.osPathDelim() + file)
-                self.ensure_dir(meta['localdir'] + self.osPathDelim() + file)
-                meta1 = meta.copy()
-                meta1['remotedir'] = meta['remotedir'] + '/' + file
-                meta1['localdir'] = meta['localdir'] + self.osPathDelim() + file
-                self.checkDirectory(meta1)
+                if self.recursive == True:
+                    self.lgr.info('Changing remote dir (ftp) to: ' + meta['remotedir'] + '/' + file)
+                    ftp.cwd(meta['remotedir'] + '/' + file)
+                    self.lgr.info('Checking if the local folder exists: ' + meta['localdir'] + self.osPathDelim() + file)
+                    self.ensure_dir(meta['localdir'] + self.osPathDelim() + file)
+                    meta1 = meta.copy()
+                    meta1['remotedir'] = meta['remotedir'] + '/' + file
+                    meta1['localdir'] = meta['localdir'] + self.osPathDelim() + file
+                    self.checkDirectory(meta1)
 
     def osPathDelim(self):
         if os.name in ('posix', 'mac', 'os2', 'ce', 'java', 'riscos'):
